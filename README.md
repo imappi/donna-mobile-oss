@@ -62,8 +62,8 @@ The screenshots show invented demo data in Finnish; English is also built in.
 
 ## Run it
 
-With Node.js 22 and npm 11 or newer (an older npm reads the lockfile's peer
-dependencies differently):
+With Node.js 22 or newer and the npm that ships with it (10.9 or newer; npm 11
+works too):
 
 ```bash
 npm ci
@@ -109,6 +109,10 @@ file `*cash*` to get a follow-up question, or `*fail*` to see the failure path.
 ```bash
 npm test && npm run typecheck && npm run lint
 ```
+
+The same checks, plus a web export (`npx expo export --platform web`) as a
+build smoke, run on every pull request and on pushes to `main`
+(`.github/workflows/checks.yml`).
 
 `npm run test:cleanup:live` is a separate Finnish language-quality suite that
 calls a real model, so it is never part of `npm test`.
