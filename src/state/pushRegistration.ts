@@ -5,6 +5,7 @@ import type { ApiClient } from '@core/api';
 import { getLocale } from '@core/i18n';
 import { notificationPermissionGranted } from './notificationPermission';
 import { readDevicePreferences } from './devicePreferences';
+import { pushProjectId } from './pushProjectId';
 
 /**
  * Device push registration against the contract's
@@ -40,6 +41,13 @@ export const registerPush = async (api: ApiClient, requestPermission = false): P
     Platform.OS === 'android' &&
     (Constants.executionEnvironment === ExecutionEnvironment.StoreClient || Constants.expoGoConfig != null)
   ) return;
+  // Without an EAS project id there is no push token to get; do not ask for
+  // a permission that could not be used. Notifications stay unavailable.
+  const projectId = pushProjectId(Constants);
+  if (!projectId) {
+    console.info('[push] unavailable: this build has no EAS project id');
+    return;
+  }
   try {
     const Notifications = await import('expo-notifications');
     if (!(await notificationPermissionGranted(Notifications, requestPermission))) return;
@@ -49,10 +57,7 @@ export const registerPush = async (api: ApiClient, requestPermission = false): P
         importance: Notifications.AndroidImportance.DEFAULT
       });
     }
-    const projectId =
-      Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId ?? undefined;
-    const token = (await Notifications.getExpoPushTokenAsync(projectId ? { projectId } : undefined))
-      .data;
+    const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
     const stored = await readStored();
     if (stored?.token === token) return;
     const { id } = await api.registerForPush({
