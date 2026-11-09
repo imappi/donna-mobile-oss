@@ -12,6 +12,9 @@ export const shell: ShellConfig = {
   appIcon: require('../../assets/images/icon.png'),
   defaultLocale: 'fi',
   api: {
+    // localhost serves development and the web demo only: preview and
+    // production builds refuse to configure without an explicit address
+    // (config/buildEnv.js).
     baseUrl: process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:4141'
   },
   demoLogin: {
