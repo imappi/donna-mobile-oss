@@ -108,7 +108,6 @@ function Controller({ page, entity }: { page: SettingsPage; entity: Entity }) {
   const copy = settingsCopy(page);
   const identity = setup.data?.identity;
   const businessId = id ?? identity?.business_id ?? "";
-  const fi = getLocale() === "fi";
   const isFinland = entity.country === "FI";
   const go = (target: SettingsPage) =>
     router.push({ pathname: "/settings/[page]", params: { page: target } });
@@ -345,7 +344,7 @@ function Controller({ page, entity }: { page: SettingsPage; entity: Entity }) {
         } else if (s === 2) {
           row.value = [
             device.notifications && permission ? st("on") : st("off"),
-            fi ? "Suomi" : "English",
+            st("currentLanguage"),
             st("notConnected"),
             st("notConnected"),
             st("unavailable"),

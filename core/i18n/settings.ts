@@ -1332,6 +1332,7 @@ const extra = {
   settings: ["Asetukset", "Settings"],
   pdf: ["PDF, CSV", "PDF, CSV"],
   biometrics: ["Biometrinen lukitus", "Biometric lock"],
+  currentLanguage: ["Suomi", "English"],
 } as const;
 export const settingsText = (
   key: keyof typeof extra,
