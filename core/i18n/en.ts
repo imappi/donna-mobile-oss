@@ -259,6 +259,7 @@ export const en = {
       handled: 'Handled',
       stalled: 'Stalled'
     },
+    undated: 'Recent',
     type: {
       question: 'Question',
       approval: 'Approval',
@@ -362,7 +363,7 @@ export const en = {
     due: 'Due {date}', total: 'Total', receiptDetails: 'Show activity details', otherAnswer: 'Another answer',
     composer: 'Ask or comment…',
     sendComment: 'Send comment',
-    answerAction: 'Answer Donna',
+    answerAction: 'Answer {brand}',
     approvalAction: 'Your decision',
     yourAnswer: 'Your answer',
     documentReceived: '{brand} has this document and will start reading it shortly.',
@@ -405,4 +406,9 @@ export const en = {
   }
 } as const;
 
-export type Dictionary = typeof en;
+/**
+ * The shape every locale must fill: the same keys as `en`, each a plain
+ * string. A locale typed as `Dictionary` cannot miss a key or add one.
+ */
+type Widen<T> = { readonly [K in keyof T]: T[K] extends string ? string : Widen<T[K]> };
+export type Dictionary = Widen<typeof en>;

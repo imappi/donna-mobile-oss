@@ -11,7 +11,8 @@ export type Locale = 'en' | 'fi';
 
 let activeLocale: Locale = 'en';
 let activeBrand = 'Donna';
-const dictionaries: Record<Locale, unknown> = { en, fi };
+/** Every locale is a complete `Dictionary`; the `en` fallback in t() stays for keys a future locale has not typed yet. */
+export const dictionaries: Record<Locale, Dictionary> = { en, fi };
 
 export const setLocale = (locale: Locale) => {
   activeLocale = locale;
@@ -88,7 +89,7 @@ export const formatReceiptTime = (timestamp: string): string => {
 /** Format a YYYY-MM calendar fact without routing it through UTC. */
 export const formatMonth = (isoMonth: string, monthOnly = false): string => {
   const m = /^(\d{4})-(\d{2})$/.exec(isoMonth || '');
-  if (!m) return activeLocale === 'fi' ? 'Viimeisimmät' : 'Recent';
+  if (!m) return t('home.undated');
   const d = new Date(Number(m[1]), Number(m[2]) - 1, 1);
   const formatted = new Intl.DateTimeFormat(activeLocale === 'fi' ? 'fi-FI' : 'en-GB', {
     month: 'long',

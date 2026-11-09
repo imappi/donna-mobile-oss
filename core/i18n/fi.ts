@@ -1,9 +1,12 @@
 import type { Dictionary } from './en';
 
-/** Finnish onboarding, Books and shared actions. Untranslated screens fall back to English. */
-type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : string };
-
-export const fi: DeepPartial<Dictionary> = {
+/**
+ * Finnish — the Donna shell's default language. Typed as the full
+ * `Dictionary`: a new English key does not compile until it has Finnish.
+ * Keep `{brand}` in the nominative (or in a hyphen compound, `{brand}-valikko`)
+ * in new strings: a case ending glued to it is right only for some names.
+ */
+export const fi: Dictionary = {
   preview: {
     booksTitle: "Esimerkkikirjanpito",
     booksBody: "Tutustu kuvitteellisten yritysten avoimiin kysymyksiin ja käsiteltyihin tapahtumiin. Muutokset koskevat vain esimerkkitiliä, eivät esittelyssä luomaasi yritystä.",
@@ -80,7 +83,17 @@ export const fi: DeepPartial<Dictionary> = {
     "offline": "Ei yhteyttä — näytetään viimeisimmät tiedot.",
     "error_generic": "Jotain meni pieleen. Mitään ei muutettu."
   },
-  auth: { signOut: "Kirjaudu ulos" },
+  auth: {
+    title: "Kirjaudu sisään",
+    email: "Sähköposti",
+    password: "Salasana",
+    signIn: "Kirjaudu sisään",
+    demo: "Kokeile esimerkkikirjanpitoa",
+    demoNote: "Kuvitteellisia yrityksiä ja aidon oloisia tapahtumia.",
+    unlock: "Avaa lukitus",
+    biometricPrompt: "Avaa kirjanpitosi",
+    signOut: "Kirjaudu ulos"
+  },
   "onboarding": {
     "title": "Hei, olen {brand}.",
     "handoff": "Pidän kirjanpitosi kunnossa – kuitit, verot, asiakkaat. Sinä teet työsi, minä hoidan paperit.",
@@ -230,23 +243,65 @@ export const fi: DeepPartial<Dictionary> = {
     loadFailed: "Kirjanpitoa ei voitu ladata",
     loadFailedBody: "Tarkista yhteys ja yritä uudelleen. Tapahtumiasi ei ole muutettu.",
     refreshFailed: "Kaikkia tietoja ei voitu päivittää. Osa tapahtumista voi olla vanhentuneita.",
+    undated: "Viimeisimmät",
     state: { needsInput: "Sinun vuorosi", processing: "Käsittelyssä", handled: "Hoidettu", stalled: "Jumissa" },
     type: { question: "Kysymys", approval: "Hyväksyntä", update: "Päivitys", receipt: "Kuitti",
       bill: "Lasku", invoice: "Myyntilasku", statement: "Tiliote", document: "Asiakirja", upload: "Lataus" }
   },
   plus: { dismiss: "Sulje valikko", chatWithDonna: "Keskustele {brand}n kanssa", snap: "Kuvaa kuitti",
     addFile: "Lisää tiedosto", mileage: "Kirjaa kilometrit" },
-  tabs: { donnaMenuCollapsed: "{brand}n valikko, suljettu", donnaMenuExpanded: "{brand}n valikko, avoinna" },
+  tabs: { actions: "Tehtävät", materials: "Aineisto", chat: "Keskustelu",
+    actionsNeedsYou: "Tehtävät. Sinua odottavia asioita: {count}.",
+    actionsOneNeedsYou: "Tehtävät. Yksi asia odottaa sinua.",
+    donnaMenuCollapsed: "{brand}n valikko, suljettu", donnaMenuExpanded: "{brand}n valikko, avoinna" },
   ownerMenu: { open: "Avaa tilivalikko", openWithAttention: "Avaa tilivalikko. Vastausta odottavia asioita: {count}.",
     dismiss: "Sulje tilivalikko", status: "Kirjanpidon tilanne", activity: "Ilmoitukset ja tapahtumat",
     switchBooks: "Vaihda yritystä", account: "Tilin asetukset" },
+  account: { title: "Tilin asetukset", signedInAs: "Kirjautuneena",
+    deletionTitle: "Poista tili",
+    deletionIntro: "Voit pyytää, että tilisi ja henkilötietosi poistetaan.",
+    deletionStart: "Pyydä tilin poistoa",
+    deletionWarning: "Tämä lähettää pyynnön tilin poistamisesta. Aineisto, joka on lain mukaan säilytettävä, voi jäädä luettavaksi säilytysajan loppuun.",
+    deletionConfirm: "Vahvista poistopyyntö",
+    deletionRequested: "Poistopyyntö lähetetty" },
   entities: { title: "Yrityksesi", section: "Kirjanpidot", current: "Valittu",
     type_sole_trader: "Toiminimi", type_limited_company: "Osakeyhtiö" },
+  materials: { title: "Aineisto",
+    empty: "Täällä ei ole vielä mitään. Lisää ensimmäinen kuittisi {brand}-valikosta.",
+    introTitle: "Kaikki lähettämäsi",
+    introSub: "Saapumisesta kirjanpitoon",
+    recentPill: "{count} kpl",
+    queuedSection: "Tässä puhelimessa",
+    queuedWaiting: "Odottaa lähetystä",
+    queuedFailed: "Ei lähtenyt",
+    queuedDiscard: "Poista",
+    queuedLost: "Tiedostoa {name} ei enää löydy tästä puhelimesta. Lisää se uudelleen." },
   card: { approve: "Hyväksy", reject: "Hylkää", answer: "Lähetä vastaus", answerPlaceholder: "Kirjoita lyhyt vastaus…",
     attachPhoto: "Liitä kuva", markWrong: "Tässä on virhe", markedWrong: "Ilmoitit virheestä – {brand} tarkistaa asian.",
     askAbout: "Kysy tästä", decided: "Päätetty", answered: "Vastattu", alreadyHandled: "Tämä asia on jo hoidettu." },
-  chat: { title: "Keskustelu", send: "Lähetä viesti", placeholder: "Kirjoita {brand}lle…", workingIn: "Työskentelee: {entity}", messageMeta: "{name} · nyt", actionDone: "Tehty — {label}", actionStale: "{label} — ei enää ajankohtainen" },
-  status: { title: "Tilanne", closed: "Suljettu", locked: "Lukittu", recorded: "{settled} / {total} kirjattu", ready: "Ajan tasalla", waiting: "Odottaa sinua" },
+  chat: { title: "Keskustelu", send: "Lähetä viesti", placeholder: "Kirjoita {brand}lle…",
+    empty: "Kysy mitä tahansa kirjanpidostasi. {brand} vastaa.", workingIn: "Työskentelee: {entity}", messageMeta: "{name} · nyt", actionDone: "Tehty — {label}", actionStale: "{label} — ei enää ajankohtainen" },
+  mileage: { title: "Kirjaa kilometrit", distance: "Matka", date: "Päivämäärä (VVVV-KK-PP)",
+    purpose: "Mikä oli matkan tarkoitus?", save: "Kirjaa" },
+  queue: { title: "Tehtävät", needsYou: "Odottaa sinua", waiting: "Odottaa muita",
+    recentlyHandled: "Äskettäin hoidetut", emptyNeedsYou: "Mikään ei odota sinua juuri nyt.",
+    emptyAll: "Kaikki on hoidettu. {brand} kysyy, kun tarvitsee sinua.",
+    itemsCount: "{count} kpl", show: "näytä", hide: "piilota" },
+  capture: { queuedOffline: "Tallennettu. Lähetetään, kun yhteys palaa.",
+    cameraPermission: "Salli kamera, niin voit kuvata kuitin.",
+    status_received: "Vastaanotettu", status_processing: "Luetaan…", status_attached: "Kirjanpidossa",
+    status_needs_info: "Tarvitsee lisätietoa", status_failed: "Ei voitu lukea", recent: "Viimeisimmät" },
+  status: { title: "Tilanne", closed: "Suljettu", locked: "Lukittu", recorded: "{settled} / {total} kirjattu", ready: "Ajan tasalla", waiting: "Odottaa sinua",
+    period: "Kirjanpitosi – {period}",
+    upToDate: "Kaikki on ajan tasalla.",
+    blockers: "Mikä on vielä kesken",
+    waitingOnYou: "Sinua odottavia asioita: {count}",
+    waitingOnYouOne: "Yksi asia odottaa sinua",
+    onDonna: "{brand} käsittelee: {count}",
+    lastUpdated: "Päivitetty {when}" },
+  activity: { title: "Tapahtumat",
+    empty: "Toistaiseksi hiljaista. {brand} merkitsee tänne, mitä tapahtuu.",
+    needsYouNudge: "Sinua odottavia asioita: {count}" },
   review: { taxes: "Verot", month: "Kuukausi", sample: "Esimerkkitiedot · vain luku", unavailable: "Tätä näkymää ei ole vielä otettu käyttöön tässä kirjanpidossa.", ask: "Kysy {brand}lta", openTaxes: "Katso verot", openMonth: "Katso kuukausi" },
   artifact: { due: "Eräpäivä {date}", total: "Yhteensä", receiptDetails: "Näytä tapahtuman tiedot", otherAnswer: "Muu vastaus", composer: "Kysy tai kommentoi…", sendComment: "Lähetä kommentti", answerAction: "Vastaa {brand}lle",
     approvalAction: "Sinun päätöksesi", yourAnswer: "Vastauksesi",
