@@ -9,7 +9,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "mock": "node mockserver/server.mjs",
-    "test": "tsx --test core/api/*.test.ts core/design/*.test.ts core/screens/*.test.ts src/state/*.test.ts mockserver/*.test.mjs",
+    "test": "tsx --test core/api/*.test.ts core/design/*.test.ts core/i18n/*.test.ts core/screens/*.test.ts src/state/*.test.ts mockserver/*.test.mjs",
     "test:cleanup:live": "node --test mockserver/evals/finnishCleanup.live.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
