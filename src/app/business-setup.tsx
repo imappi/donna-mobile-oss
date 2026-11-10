@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ApiError, type BusinessIdentity, type BusinessSetupAction, type RegistryCandidate } from '@core/api';
 import { BusinessSetupScreen } from '@core/screens/BusinessSetupScreen';
 import { t } from '@core/i18n';
+import { entityGate } from '@/state/entityGate';
 import { useSession } from '@/state/session';
 import { useBusinessSetup } from '@/state/hooks';
 import { useCaptureActions } from '@/state/captureActions';
@@ -66,9 +67,10 @@ function SetupController({ entityId, initialName }: { entityId: string; initialN
 
 export default function BusinessSetupRoute() {
   const { state } = useSession();
-  if (state.phase === 'loading') return null;
-  if (state.phase === 'locked') return <Redirect href="/unlock" />;
-  if (state.phase !== 'signedIn') return <Redirect href="/onboarding/phone" />;
+  const gate = entityGate(state);
+  if (gate === 'wait') return null;
+  if (gate === '/unlock' || gate === '/onboarding/phone') return <Redirect href={gate} />;
+  if (state.phase !== 'signedIn') return null;
   const entity = state.entities.find(item => item.id === state.entityId);
   if (entity?.country !== 'FI') return <Redirect href="/actions" />;
   return <><Head><title>{t('setup.title')}</title></Head>

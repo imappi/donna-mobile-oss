@@ -331,7 +331,9 @@ export const en = {
   mileage: {
     title: 'Log mileage',
     distance: 'Distance',
-    date: 'Date (YYYY-MM-DD)',
+    date: 'Date (dd/mm/yyyy)',
+    dateFormat: 'Write the date as {example}.',
+    dateImpossible: '{date} is not a date in the calendar.',
     purpose: 'What was the trip for?',
     save: 'Log it'
   },

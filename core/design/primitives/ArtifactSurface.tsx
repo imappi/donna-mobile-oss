@@ -134,6 +134,9 @@ const COMPOSER: ViewStyle = {
 };
 const COMPOSER_INPUT: TextStyle = {
   flex: 1,
+  // A web TextInput keeps its intrinsic width unless allowed to shrink; at
+  // 320pt that pushed the send button 13pt past the screen edge.
+  minWidth: 0,
   minHeight: artifact.composerHeight,
   backgroundColor: 'transparent',
   borderWidth: 0,
@@ -142,6 +145,7 @@ const COMPOSER_INPUT: TextStyle = {
   lineHeight: shellType.rowTitleLine
 };
 const SEND: ViewStyle = {
+  flexShrink: 0,
   width: artifact.sendSize,
   height: artifact.sendSize,
   borderRadius: radius.pill,

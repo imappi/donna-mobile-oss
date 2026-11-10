@@ -7,9 +7,14 @@ import { useShellOverlayAccessibilityHidden } from './Screen';
  * The one text field. PRIMITIVE-SET EXTENSION (flagged to Kari per
  * DESIGN.md §9): sign-in and inline ask answers need a field; this is the
  * quiet version — card ground, hairline, body type, no focus glow.
+ *
+ * `grow` (flagged extension, 2026-11-10): the field takes the free width of
+ * a Row and shrinks below its intrinsic width, so trailing controls (the
+ * mileage unit buttons) stay on screen at 320pt.
  */
-export const Input = ({ variant = 'default', cardRole = 'fact', ...props }: TextInputProps & {
+export const Input = ({ variant = 'default', cardRole = 'fact', grow = false, ...props }: TextInputProps & {
   variant?: 'default' | 'onboarding' | 'card'; cardRole?: 'company' | 'owner' | 'profession' | 'fact';
+  grow?: boolean;
 }) => {
   const shellOverlayOpen = useShellOverlayAccessibilityHidden();
   const [focused, setFocused] = React.useState(false);
@@ -46,6 +51,7 @@ export const Input = ({ variant = 'default', cardRole = 'fact', ...props }: Text
         variant === 'onboarding' && focused ? { borderColor: color.inkSoft } : null,
         variant !== 'default' && Platform.OS === 'web' ? { outlineStyle: 'solid', outlineWidth: 0 } : null,
         props.multiline ? { minHeight: 88, textAlignVertical: 'top' } : null,
+        grow ? { flex: 1, minWidth: 0 } : null,
         props.style
       ]}
     />

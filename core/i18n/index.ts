@@ -77,6 +77,48 @@ export const formatDate = (isoDate: string): string => {
   }).format(d);
 };
 
+/** A YYYY-MM-DD fact as the owner's language writes it in full: 9.11.2026 (fi), 09/11/2026 (en). */
+export const formatNumericDate = (isoDate: string): string => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate || '');
+  if (!m) return '';
+  return numericDateFormat().format(new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+};
+
+export type ParsedDate = { ok: true; iso: string } | { ok: false; reason: 'format' | 'impossible' };
+
+/**
+ * Read a date the owner typed the way their language writes it (the same
+ * order and separator formatNumericDate prints; one- or two-digit day and
+ * month) and return the plain ISO date the contract wants. An ISO date is
+ * accepted as typed. Impossible days (31.2.2026) are refused, never rolled
+ * over into the next month.
+ */
+export const parseNumericDate = (input: string): ParsedDate => {
+  const value = (input ?? '').trim();
+  let year: number, month: number, day: number;
+  const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(value);
+  if (iso) {
+    [year, month, day] = [Number(iso[1]), Number(iso[2]), Number(iso[3])];
+  } else {
+    const parts = numericDateFormat().formatToParts(new Date(2000, 10, 22));
+    const order = parts.filter(part => part.type !== 'literal').map(part => part.type);
+    const separator = parts.find(part => part.type === 'literal')?.value ?? '.';
+    const escaped = separator.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
+    const fields = order.map(type => (type === 'year' ? '(\\d{4})' : '(\\d{1,2})'));
+    const match = new RegExp('^' + fields.join(escaped) + '$').exec(value);
+    if (!match || order.length !== 3) return { ok: false, reason: 'format' };
+    const read = (type: string) => Number(match[order.indexOf(type as Intl.DateTimeFormatPartTypes) + 1]);
+    [year, month, day] = [read('year'), read('month'), read('day')];
+  }
+  if (month < 1 || month > 12 || day < 1 || day > new Date(year, month, 0).getDate())
+    return { ok: false, reason: 'impossible' };
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return { ok: true, iso: `${year}-${pad(month)}-${pad(day)}` };
+};
+
+const numericDateFormat = () =>
+  new Intl.DateTimeFormat(activeLocale === 'fi' ? 'fi-FI' : 'en-GB', { day: 'numeric', month: 'numeric', year: 'numeric' });
+
 /** Quiet receipt timestamps use the handoff's 24-hour HH:mm clock. */
 export const formatReceiptTime = (timestamp: string): string => {
   const date = new Date(timestamp);

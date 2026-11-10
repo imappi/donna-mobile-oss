@@ -22,6 +22,7 @@ import {
 } from "@core/i18n/settings";
 import { formatDate, formatMonth, getLocale, t } from "@core/i18n";
 import { shell } from "@/shell";
+import { entityGate } from "./entityGate";
 import { useSession } from "./session";
 import { useBooksStatus, useBusinessSetup } from "./hooks";
 import { useDeviceSettings } from "./deviceSettings";
@@ -718,9 +719,11 @@ function Controller({ page, entity }: { page: SettingsPage; entity: Entity }) {
 }
 export const SettingsRoute = ({ page = "home" }: { page?: string }) => {
   const { state } = useSession();
-  if (state.phase === "loading") return null;
-  if (state.phase === "locked") return <Redirect href="/unlock" />;
-  if (state.phase !== "signedIn") return <Redirect href="/onboarding/phone" />;
+  const gate = entityGate(state);
+  if (gate === "wait") return null;
+  if (gate === "noEntity") return <Redirect href="/actions" />;
+  if (gate !== "open") return <Redirect href={gate} />;
+  if (state.phase !== "signedIn") return null;
   const entity = state.entities.find((item) => item.id === state.entityId);
   if (!entity) return <Redirect href="/actions" />;
   if (!pages.includes(page as SettingsPage))

@@ -1,7 +1,8 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { FinancialReviewScreen } from '@core/screens/FinancialReviewScreen';
+import { EntityRoute } from './EntityRoute';
 import { useEntityId, useSession } from './session';
 import { shell } from '@/shell';
 
@@ -19,9 +20,5 @@ const SignedInReview = ({ kind }: { kind: 'taxes' | 'month' }) => {
     onRow={onRow} onAction={action => { if (action.kind === 'queue_card' && action.card_id) onRow(action.card_id); else onChat(); }} />;
 };
 export const FinancialReviewRoute = ({ kind }: { kind: 'taxes' | 'month' }) => {
-  const { state } = useSession();
-  if (state.phase === 'loading') return null;
-  if (state.phase === 'locked') return <Redirect href="/unlock" />;
-  if (state.phase === 'signedOut') return <Redirect href="/onboarding/phone" />;
-  return <SignedInReview kind={kind} />;
+  return <EntityRoute><SignedInReview kind={kind} /></EntityRoute>;
 };

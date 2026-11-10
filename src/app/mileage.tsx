@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@core/design';
 import { t } from '@core/i18n';
 import { MileageScreen } from '@core/screens/MileageScreen';
+import { EntityRoute } from '@/state/EntityRoute';
 import { useEntityId, useSession } from '@/state/session';
 
 const todayIso = () => {
@@ -12,7 +13,7 @@ const todayIso = () => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
 
-export default function MileageRoute() {
+const SignedInMileage = () => {
   const { api } = useSession();
   const entityId = useEntityId();
   const queryClient = useQueryClient();
@@ -21,6 +22,8 @@ export default function MileageRoute() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [unit, setUnit] = useState<'km' | 'mi'>('km');
+  // A cold deep link has no history to go back to: land on Books instead.
+  const leave = () => (router.canGoBack() ? router.back() : router.replace('/actions'));
 
   return (
     <MileageScreen
@@ -29,7 +32,7 @@ export default function MileageRoute() {
       defaultDate={todayIso()}
       unit={unit}
       onToggleUnit={setUnit}
-      onBack={() => router.back()}
+      onBack={leave}
       onSave={async ({ date, distance, purpose }) => {
         setBusy(true);
         setError(null);
@@ -37,7 +40,7 @@ export default function MileageRoute() {
           const result = await api.recordMileage(entityId, { date, distance, unit, purpose });
           queryClient.invalidateQueries({ queryKey: ['queue', entityId] });
           toast.show(result.receipt.summary);
-          router.back();
+          leave();
         } catch (e) {
           setError(e instanceof Error ? e.message : t('common.error_generic'));
         } finally {
@@ -46,4 +49,8 @@ export default function MileageRoute() {
       }}
     />
   );
+};
+
+export default function MileageRoute() {
+  return <EntityRoute><SignedInMileage /></EntityRoute>;
 }
