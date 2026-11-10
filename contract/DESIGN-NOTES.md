@@ -100,10 +100,11 @@ are **contract-design smells to report to Kari**, not app workarounds.
   Activity row and a notification tap land, so they cannot drift. Two
   server-side expectations recorded with it: the backend upserts a
   registration on (principal, token) rather than growing one per app
-  start (the app skips re-registering an unchanged token, so a
-  restarted backend that LOSES registrations silently drops the
-  device); and tokens are pruned on the Expo push receipt error, not
-  trusted forever.
+  start — the app registers on every sign-in, even with an unchanged
+  token, so the backend covers businesses the owner gained since; a
+  repeat answers the same id and writes nothing when nothing changed
+  (the mock does exactly this); and tokens are pruned on the Expo push
+  receipt error, not trusted forever.
 - **Voice onboarding is draft-first and non-terminal.** The device records
   only after an explicit microphone action and uploads only a completed file.
   The backend owns the OpenAI key, transcription, schema-constrained
