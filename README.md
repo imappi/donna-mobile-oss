@@ -174,8 +174,9 @@ notifications unavailable; nothing else changes.
    which depends on that backend, plus a privacy policy URL, the export
    compliance answer (`ITSAppUsesNonExemptEncryption`) and an iOS privacy
    manifest review.
-7. **Development builds** (`eas build --profile development`) also need
-   `expo-dev-client` added to the dependencies.
+7. **Development builds** (`eas build --profile development`) use
+   `expo-dev-client`, which is already a dependency; they still need the
+   Expo account and EAS project id above.
 8. **Store copy:** listing text, screenshots, support address and age rating.
    None is written here.
 
