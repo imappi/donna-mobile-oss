@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { Redirect, Stack as RouterStack, useRouter, usePathname } from 'expo-router';
+import { Stack as RouterStack, useRouter, usePathname } from 'expo-router';
 import { FloatingDonnaButton, ShellHeaderMenuProvider, ShellOverlayAccessibilityProvider, Stack as ShellFrame } from '@core/design';
 import { t } from '@core/i18n';
 import { settingsText } from '@core/i18n/settings';
 import { shell } from '@/shell';
 import { useCaptureActions } from '@/state/captureActions';
 import { useQueue } from '@/state/hooks';
-import { useSession } from '@/state/session';
+import { EntityRoute } from '@/state/EntityRoute';
 import { destinationForLauncherAction, LAUNCHER_ACTIONS, type LauncherActionKey } from '@/state/shellNavigation';
 
 const ChromeStack = () => {
@@ -54,9 +54,5 @@ const ChromeStack = () => {
   </RouterStack>;
 };
 export default function TabsLayout() {
-  const {state}=useSession();
-  if(state.phase==='loading')return null;
-  if(state.phase==='locked')return <Redirect href="/unlock"/>;
-  if(state.phase==='signedOut')return <Redirect href="/onboarding/phone"/>;
-  return <ChromeStack/>;
+  return <EntityRoute noEntity="/entities"><ChromeStack/></EntityRoute>;
 }

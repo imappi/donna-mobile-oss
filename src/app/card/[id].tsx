@@ -1,7 +1,7 @@
 import { shell } from '@/shell';
 import React, { useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
-import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { AppliableChatAction, Receipt } from '@core/api';
 import { useToast } from '@core/design';
@@ -9,6 +9,7 @@ import { t } from '@core/i18n';
 import { CardDetailScreen } from '@core/screens/CardDetailScreen';
 import { useCaptureQueue } from '@/state/captureQueue';
 import { useArtifactConversation, useDecide } from '@/state/hooks';
+import { EntityRoute } from '@/state/EntityRoute';
 import { useEntityId, useSession } from '@/state/session';
 
 const SignedInCardRoute = () => {
@@ -112,9 +113,5 @@ const SignedInCardRoute = () => {
 };
 
 export default function CardRoute() {
-  const { state } = useSession();
-  if (state.phase === 'loading') return null;
-  if (state.phase === 'locked') return <Redirect href="/unlock" />;
-  if (state.phase === 'signedOut') return <Redirect href="/onboarding/phone" />;
-  return <SignedInCardRoute />;
+  return <EntityRoute><SignedInCardRoute /></EntityRoute>;
 }

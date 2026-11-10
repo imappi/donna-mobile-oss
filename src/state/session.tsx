@@ -20,7 +20,7 @@ import { readDevicePreferences } from './devicePreferences';
  * hardware, nothing enrolled, web) the restore proceeds — the gate is
  * a protection where it exists, not a lockout where it doesn't.
  */
-type SessionState =
+export type SessionState =
   | { phase: 'loading' }
   | { phase: 'locked' }
   | { phase: 'signedOut' }

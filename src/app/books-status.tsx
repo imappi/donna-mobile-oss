@@ -1,7 +1,8 @@
 import React from 'react';
-import { Redirect, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { StatusScreen } from '@core/screens/StatusScreen';
 import { useBooksStatus } from '@/state/hooks';
+import { EntityRoute } from '@/state/EntityRoute';
 import { useSession, useEntityId } from '@/state/session';
 import { shell } from '@/shell';
 
@@ -21,9 +22,5 @@ const SignedInStatus = () => {
     }} />;
 };
 export default function StatusRoute() {
-  const { state } = useSession();
-  if (state.phase === 'loading') return null;
-  if (state.phase === 'locked') return <Redirect href="/unlock" />;
-  if (state.phase === 'signedOut') return <Redirect href="/onboarding/phone" />;
-  return <SignedInStatus />;
+  return <EntityRoute><SignedInStatus /></EntityRoute>;
 }

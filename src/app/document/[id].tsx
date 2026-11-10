@@ -2,11 +2,12 @@ import { shell } from '@/shell';
 import React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { AppliableChatAction } from '@core/api';
-import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useToast } from '@core/design';
 import { t } from '@core/i18n';
 import { DocumentDetailScreen } from '@core/screens/DocumentDetailScreen';
 import { useArtifactConversation } from '@/state/hooks';
+import { EntityRoute } from '@/state/EntityRoute';
 import { useEntityId, useSession } from '@/state/session';
 
 const SignedInDocumentRoute = () => {
@@ -82,9 +83,5 @@ const SignedInDocumentRoute = () => {
 };
 
 export default function DocumentRoute() {
-  const { state } = useSession();
-  if (state.phase === 'loading') return null;
-  if (state.phase === 'locked') return <Redirect href="/unlock" />;
-  if (state.phase === 'signedOut') return <Redirect href="/onboarding/phone" />;
-  return <SignedInDocumentRoute />;
+  return <EntityRoute><SignedInDocumentRoute /></EntityRoute>;
 }
