@@ -8,7 +8,7 @@ import http from 'node:http';
 import { readSettings, updateSettings } from './settings.mjs';
 import { buildFinancialReview, enrichRefinementBook, refinementStatus } from './refinementFixtures.mjs';
 import crypto from 'node:crypto';
-import { demoCopy, localizeSeedCards, localizeSeedDocuments } from './finnishFixtures.mjs';
+import { demoCopy, localizeSeedActivity, localizeSeedCards, localizeSeedChat, localizeSeedDocuments, localizeStatus } from './finnishFixtures.mjs';
 import { lookupBusiness, SetupError, setupSnapshot, stageRegistryCandidate, updateBusinessSetup } from './businessSetup.mjs';
 import {
   DEMO_LOGIN,
@@ -61,9 +61,9 @@ const state = {
       entity: ENTITY,
       cards: localizeSeedCards(buildCards()),
       documents: localizeSeedDocuments(buildDocuments()),
-      activity: buildActivity(),
+      activity: localizeSeedActivity(buildActivity()),
       status: buildStatus,
-      chat: [
+      chat: localizeSeedChat([
         {
           id: 'msg-welcome',
           author: 'donna',
@@ -82,7 +82,7 @@ const state = {
           text: 'The standard rate applies unless the receipt says otherwise. Send it here and I’ll check the source before I post anything.',
           at: new Date(Date.now() - 1200e3).toISOString()
         }
-      ],
+      ]),
       artifactThreads: new Map(),
       artifactReceipts: new Map(),
       parse: new Map(), // documentId -> { parse_status, parse_stage, ... }
@@ -92,16 +92,16 @@ const state = {
       entity: ENTITY_2,
       cards: localizeSeedCards(secondBook.cards),
       documents: localizeSeedDocuments(secondBook.documents),
-      activity: secondBook.activity,
+      activity: localizeSeedActivity(secondBook.activity),
       status: secondBook.status,
-      chat: [
+      chat: localizeSeedChat([
         {
           id: 'msg-welcome-hazelmoor',
           author: 'donna',
           text: secondBook.chatWelcome,
           at: new Date(Date.now() - 7200e3).toISOString()
         }
-      ],
+      ]),
       artifactThreads: new Map(),
       artifactReceipts: new Map(),
       parse: new Map(),
@@ -348,8 +348,9 @@ const mintChatActions = (book, text) => {
     actions.push({
       id,
       kind: 'record_mileage',
-      label: `Log ${distance} ${unit} — business journey`,
-      summary: `I’ll put a ${distance} ${unit} journey in your books at the standard rate, dated today.`,
+      label: demoCopy(`Log ${distance} ${unit} — business journey`, `Kirjaa ${distance} ${unit} – työajo`),
+      summary: demoCopy(`I’ll put a ${distance} ${unit} journey in your books at the standard rate, dated today.`,
+        `Kirjaan kirjanpitoosi tälle päivälle ${distance} ${unit} työajoa kilometrikorvauksen vakiotaksalla.`),
       state: 'available',
       applied_at: null
     });
@@ -366,8 +367,9 @@ const mintChatActions = (book, text) => {
       actions.push({
         id,
         kind: 'answer_card',
-        label: `Answer: ${choice.label} — ${askCard.counterparty}`,
-        summary: `That settles the open question on ${askCard.counterparty} — I’ll code it and move on.`,
+        label: demoCopy(`Answer: ${choice.label} — ${askCard.counterparty}`, `Vastaa: ${choice.label} – ${askCard.counterparty}`),
+        summary: demoCopy(`That settles the open question on ${askCard.counterparty} — I’ll code it and move on.`,
+          `Tämä ratkaisee avoimen kysymyksen (${askCard.counterparty}). Kirjaan sen ja jatkan eteenpäin.`),
         state: 'available',
         applied_at: null
       });
@@ -844,7 +846,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (method === 'GET' && rest === '/status') {
-      const status = book.status(needsYouCount(book), book.cards);
+      const status = localizeStatus(book.status(needsYouCount(book), book.cards));
       const n = status.needs_you_count;
       status.headline =
         n === 0
@@ -1004,13 +1006,18 @@ const server = http.createServer(async (req, res) => {
         author: 'donna',
         text: actions.length
           ? actions[0].kind === 'record_mileage'
-            ? 'I can put that journey in your books right now — one tap below.'
-            : 'That sounds like it settles an open question — want me to file it?'
-          : /vat|tax/i.test(text)
-            ? 'Good question. For your kind of purchases the standard rate applies unless the receipt says otherwise — I check each one against the source rules and flag anything unusual in Actions.'
-            : /receipt|photo/i.test(text)
-              ? 'Snap it with the + button whenever — I match it to the right bank line and you’ll see it settle in Materials.'
-              : `Noted — I’ve got it. ${n === 0 ? 'Nothing is waiting on you right now.' : `${n} thing${n === 1 ? ' is' : 's are'} waiting on you in Actions; the rest is handled.`}`,
+            ? demoCopy('I can put that journey in your books right now — one tap below.',
+              'Voin kirjata matkan kirjanpitoosi heti – yksi napautus alla riittää.')
+            : demoCopy('That sounds like it settles an open question — want me to file it?',
+              'Tämä näyttää ratkaisevan avoimen kysymyksen – kirjaanko sen?')
+          : /vat|tax|alv|vero/i.test(text)
+            ? demoCopy('Good question. For your kind of purchases the standard rate applies unless the receipt says otherwise — I check each one against the source rules and flag anything unusual in Actions.',
+              'Hyvä kysymys. Tällaisiin ostoksiin pätee yleinen verokanta, ellei kuitissa lue muuta. Tarkistan jokaisen säännöistä ja nostan poikkeukset Tehtäviin.')
+            : /receipt|photo|kuitti|kuva/i.test(text)
+              ? demoCopy('Snap it with the + button whenever — I match it to the right bank line and you’ll see it settle in Materials.',
+                'Kuvaa se + -painikkeella milloin vain. Yhdistän sen oikeaan tilitapahtumaan, ja näet sen Aineistossa.')
+              : demoCopy(`Noted — I’ve got it. ${n === 0 ? 'Nothing is waiting on you right now.' : `${n} thing${n === 1 ? ' is' : 's are'} waiting on you in Actions; the rest is handled.`}`,
+                `Selvä, hoidan sen. ${n === 0 ? 'Mikään ei odota sinua juuri nyt.' : `${n === 1 ? '1 asia odottaa' : `${n} asiaa odottaa`} sinua Tehtävissä, loput on hoidettu.`}`),
         at: new Date(Date.now() + 800).toISOString()
       };
       if (book.refinementSample) reply.text = demoCopy(
