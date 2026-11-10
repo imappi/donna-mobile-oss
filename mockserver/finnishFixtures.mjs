@@ -146,3 +146,84 @@ const chatCopy = {
 };
 export const localizeSeedChat = (messages, locale = process.env.DEMO_LOCALE) => locale !== 'fi' ? messages :
   messages.map(message => chatCopy[message.id] ? { ...message, text: chatCopy[message.id] } : message);
+
+// ── Live copy: numbers and dates the server writes into Finnish sentences ──
+/** 12.5 → "12,5" (Finnish decimal comma). */
+export const fiNumber = (value) => String(value).replace('.', ',');
+/** "2026-11-03" → "3.11.2026"; anything else is left as sent. */
+export const fiDate = (iso) => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso));
+  return match ? `${Number(match[3])}.${Number(match[2])}.${match[1]}` : String(iso);
+};
+
+// ── Error messages: every `error` the mock answers with ───────────────────
+// Keyed by the English message the server writes, so an error stays one
+// line at its call site and json() translates it at the boundary.
+const errorCopy = {
+  'Only ask cards take answers.': 'Vain kysymykseen voi vastata.',
+  'An answer needs text, a choice, or a document.': 'Vastaukseen tarvitaan teksti, valinta tai tiedosto.',
+  'Only approval cards take approve/reject.': 'Vain hyväksyttävän asian voi hyväksyä tai hylätä.',
+  'Only fyi cards take veto_flag.': 'Vain tehdyn asian voi merkitä vääräksi.',
+  'Files up to 10 MB are supported.': 'Tiedosto saa olla enintään 10 Mt.',
+  'Recordings up to 8 MB are supported.': 'Äänite saa olla enintään 8 Mt.',
+  'The request body is too large.': 'Pyyntö on liian suuri.',
+  'Those details are not valid.': 'Tunnukset eivät kelpaa.',
+  'Refresh token expired.': 'Kirjautuminen on vanhentunut. Kirjaudu uudelleen.',
+  'Access token required.': 'Kirjaudu sisään jatkaaksesi.',
+  'No such entity.': 'Yritystä ei löydy.',
+  'Settings could not be saved.': 'Asetuksia ei voitu tallentaa.',
+  'Setup not available.': 'Yritystietojen täydennys ei ole käytettävissä.',
+  'Business setup could not be updated.': 'Yritystietoja ei voitu päivittää.',
+  'Business setup unavailable.': 'Yritystiedot eivät ole juuri nyt saatavilla.',
+  'Enter a business introduction of up to 12000 characters.': 'Kirjoita yrityksesi esittely, enintään 12 000 merkkiä.',
+  'Your introduction could not be prepared. Please try again.': 'Esittelyäsi ei saatu valmiiksi. Yritä uudelleen.',
+  'The introduction could not be prepared. Please try again.': 'Esittelyä ei saatu valmiiksi. Yritä uudelleen.',
+  'A completed recording and its duration are required.': 'Tarvitaan valmis äänite ja sen kesto.',
+  'Recordings can be up to five minutes long.': 'Äänite saa olla enintään viisi minuuttia pitkä.',
+  'The recording filename is invalid.': 'Äänitteen tiedostonimi ei kelpaa.',
+  'Use an M4A, MP4, MP3, WAV, or WebM recording.': 'Käytä M4A-, MP4-, MP3-, WAV- tai WebM-äänitettä.',
+  'A review draft could not be prepared from that recording.': 'Äänitteestä ei saatu tehtyä luonnosta tarkistettavaksi.',
+  'A review draft could not be prepared.': 'Luonnosta ei saatu tehtyä tarkistettavaksi.',
+  'The recording could not be transcribed.': 'Äänitettä ei saatu muutettua tekstiksi.',
+  'The recording did not contain clear speech.': 'Äänitteessä ei ollut selvää puhetta.',
+  'No speech was detected.': 'Äänitteessä ei kuulunut puhetta.',
+  'Local speech recognition could not process the recording.': 'Puheentunnistus ei saanut äänitettä käsiteltyä.',
+  'Speech recognition is unavailable. Please try again.': 'Puheentunnistus ei ole käytettävissä. Yritä uudelleen.',
+  'The extracted profile was not valid.': 'Äänitteestä poimitut tiedot eivät kelpaa.',
+  'The extracted profile was incomplete.': 'Äänitteestä poimitut tiedot jäivät vajaiksi.',
+  'The owner and business names must be checked before saving.': 'Tarkista oma nimesi ja yrityksen nimi ennen tallentamista.',
+  'The reviewed profile is invalid.': 'Tarkistetut tiedot eivät kelpaa.',
+  'No such card.': 'Asiaa ei löydy.',
+  'No such artifact.': 'Kohdetta ei löydy.',
+  'Say something about this item first.': 'Kirjoita ensin jotain tästä asiasta.',
+  'Invalid period.': 'Ajanjakso ei kelpaa.',
+  'No such document.': 'Tiedostoa ei löydy.',
+  'filename, mime_type, size, checksum_sha256 required.': 'Tiedoston nimi, tyyppi, koko ja tarkistussumma tarvitaan.',
+  'documents required.': 'Lisää ainakin yksi tiedosto.',
+  'Invalid document purpose.': 'Tiedoston käyttötarkoitus ei kelpaa.',
+  'Background records cannot answer a receipt question.': 'Taustamateriaalilla ei voi vastata kuittia koskevaan kysymykseen.',
+  'Upload the background record before registering it.': 'Lähetä taustamateriaali ennen kuin lisäät sen.',
+  'Only failed or duplicate documents can be retried.': 'Uudelleen voi yrittää vain epäonnistunutta tai kaksoiskappaleeksi merkittyä tiedostoa.',
+  'action must be create, replace, or cancel.': 'Valitse, lisätäänkö tiedosto, korvataanko vanha vai perutaanko.',
+  'Say something first.': 'Kirjoita ensin viesti.',
+  'date, distance, unit and purpose are required.': 'Päivämäärä, matka, yksikkö ja tarkoitus tarvitaan.',
+  'No such action.': 'Toimintoa ei löydy.',
+  'Action is unavailable.': 'Toiminto ei ole enää käytettävissä.',
+  'platform and expo_push_token required.': 'Laitteen alusta ja ilmoitustunniste tarvitaan.',
+  'No such registration.': 'Ilmoitusten rekisteröintiä ei löydy.'
+};
+const errorPatterns = [
+  [/^Unknown decision type '(.*)'\.$/, (type) => `Tuntematon päätös: ${type}.`],
+  [/^No route: (.*)$/, (route) => `Tätä reittiä ei ole: ${route}`]
+];
+/** Finnish for an error message; a message from elsewhere (an outside service) gets a plain generic line. */
+export const localizeError = (message, locale = process.env.DEMO_LOCALE) => {
+  if (locale !== 'fi' || typeof message !== 'string') return message;
+  if (errorCopy[message]) return errorCopy[message];
+  for (const [pattern, render] of errorPatterns) {
+    const match = pattern.exec(message);
+    if (match) return render(...match.slice(1));
+  }
+  return 'Jokin meni vikaan. Yritä uudelleen.';
+};
+export const errorMessages = () => Object.keys(errorCopy);

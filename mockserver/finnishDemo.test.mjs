@@ -30,6 +30,12 @@ const start = async (t, locale) => {
       if (url) { clearTimeout(timer); resolve(url); }
     });
   });
+  const call = async (method, path, token, body) => {
+    const response = await fetch(root + path, { method,
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      ...(body ? { body: JSON.stringify(body) } : {}) });
+    return { status: response.status, body: await response.json() };
+  };
   const request = async (path, token, body) => {
     const response = await fetch(root + path, { method: body ? 'POST' : 'GET',
       headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
@@ -38,7 +44,7 @@ const start = async (t, locale) => {
     return response.json();
   };
   const session = await request('/auth/sessions', null, { email: 'demo@example.test', password: 'receipts' });
-  return { request, token: session.access_token, entities: session.entities.map(entity => entity.id) };
+  return { call, request, token: session.access_token, entities: session.entities.map(entity => entity.id) };
 };
 
 /** Same shape and facts; every human-readable string translated. */
@@ -90,4 +96,70 @@ test('Finnish status keeps the backend’s period facts and labels months in Fin
   };
   assert.deepEqual(status.periods.map(period => period.label), status.periods.map(period => month(period.period_start)));
   assert.ok(status.periods[0].blockers.every(blocker => !/\b(the|you|is)\b/i.test(blocker.label)));
+});
+
+/** Every human-readable string the owner sees after acting: receipts, checks, notices, errors. */
+const SPOKEN = new Set(['summary', 'detail', 'error', 'title', 'description', 'question', 'label', 'result_label']);
+const ENGLISH = /\b(the|your|you|is|was|in|no|only|such|for|it|and|are|required|logged|declined|flagged)\b/i;
+const OWNER_WORDS = ['Not this week', 'Timber yard', 'Drove 12 km to the timber yard'];
+const spoken = (en, fi, path, problems) => {
+  if (en && typeof en === 'object') {
+    for (const key of Object.keys(en)) spoken(en[key], fi?.[key], `${path}.${key}`, problems);
+    return;
+  }
+  if (!SPOKEN.has(path.split('.').pop()) || typeof en !== 'string') return;
+  // The owner's own words (a note, a journey purpose) stay as typed.
+  const own = OWNER_WORDS.reduce((text, words) => text.replaceAll(words, ''), String(fi));
+  if (fi === en || ENGLISH.test(own)) problems.push(`${path}: “${fi}”`);
+};
+
+test('a Finnish demo answers decisions, mileage and errors in Finnish', async (t) => {
+  const [en, fi] = await Promise.all([start(t, 'en'), start(t, 'fi')]);
+  const entity = en.entities[0];
+  const card = (id) => `/entities/${entity}/queue/cards/${encodeURIComponent(id)}/decision`;
+  const steps = [
+    ['decline', 'POST', card('outbound_action:act-reminder-harbour'), { type: 'reject', note: 'Not this week' }],
+    ['this was wrong', 'POST', card('outbound_action:fyi-cloudbill'), { type: 'veto_flag' }],
+    ['mileage', 'POST', `/entities/${entity}/mileage`, { date: '2026-11-03', distance: 12.5, unit: 'km', purpose: 'Timber yard' }],
+    ['wrong decision', 'POST', card('outbound_action:act-issue-kestrel'), { type: 'veto_flag' }],
+    ['missing card', 'GET', `/entities/${entity}/queue/cards/nope`],
+    ['empty chat', 'POST', `/entities/${entity}/chat/messages`, { text: ' ' }],
+    ['incomplete mileage', 'POST', `/entities/${entity}/mileage`, { distance: 3 }],
+    ['missing document', 'POST', `/entities/${entity}/documents/nope/retry`, {}],
+    ['foreign registration', 'DELETE', '/notifications/registrations/reg-nope'],
+    ['unknown route', 'GET', '/nowhere'],
+    ['bad sign-in', 'POST', '/auth/sessions', { email: 'nobody@example.test', password: 'x' }]
+  ];
+  const problems = [];
+  for (const [name, method, path, body] of steps) {
+    const [a, b] = [await en.call(method, path, en.token, body), await fi.call(method, path, fi.token, body)];
+    assert.equal(b.status, a.status, name);
+    spoken(a.body, b.body, name, problems);
+  }
+  // The mileage a chat message proposes, applied from the chat.
+  for (const client of [en, fi]) {
+    const { reply } = await client.request(`/entities/${entity}/chat/messages`, client.token, { text: 'Drove 12 km to the timber yard' });
+    client.applied = await client.request(`/entities/${entity}/chat/actions/${reply.actions[0].id}/apply`, client.token, {});
+  }
+  spoken(en.applied, fi.applied, 'chat mileage', problems);
+  assert.deepEqual(problems, []);
+});
+
+test('every error message the mock writes has its own Finnish line', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { errorMessages, localizeError } = await import('./finnishFixtures.mjs');
+  const known = new Set(errorMessages());
+  const missing = [];
+  for (const file of ['server.mjs', 'onboardingVoice.mjs']) {
+    const source = readFileSync(new URL(file, import.meta.url), 'utf8');
+    const written = [
+      ...source.matchAll(/error: '([^']+)'/g),
+      ...source.matchAll(/VoiceOnboardingError\(\s*\d+,\s*'\w+',\s*(?:cause instanceof Error \? cause\.message : )?'([^']+)'/g),
+      ...source.matchAll(/error: \w+ \? '([^']+)' : '([^']+)'/g)
+    ].flatMap(match => match.slice(1)).filter(Boolean);
+    for (const message of written) if (!known.has(message)) missing.push(`${file}: ${message}`);
+  }
+  assert.deepEqual(missing, []);
+  assert.equal(localizeError("Unknown decision type 'shrug'.", 'fi'), 'Tuntematon päätös: shrug.');
+  assert.equal(localizeError('No such card.', 'en'), 'No such card.');
 });

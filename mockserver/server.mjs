@@ -8,7 +8,7 @@ import http from 'node:http';
 import { readSettings, updateSettings } from './settings.mjs';
 import { buildFinancialReview, enrichRefinementBook, refinementStatus } from './refinementFixtures.mjs';
 import crypto from 'node:crypto';
-import { demoCopy, localizeSeedActivity, localizeSeedCards, localizeSeedChat, localizeSeedDocuments, localizeStatus } from './finnishFixtures.mjs';
+import { demoCopy, fiDate, fiNumber, localizeError, localizeSeedActivity, localizeSeedCards, localizeSeedChat, localizeSeedDocuments, localizeStatus } from './finnishFixtures.mjs';
 import { lookupBusiness, SetupError, setupSnapshot, stageRegistryCandidate, updateBusinessSetup } from './businessSetup.mjs';
 import { createPushRegistrations } from './pushRegistrations.mjs';
 import {
@@ -182,7 +182,7 @@ const scheduleAskResolution = (book, card) => {
     card.state = 'resolved';
     pushActivity(book, {
       kind: 'card_resolved',
-      title: 'Thanks — your answer settled it',
+      title: demoCopy('Thanks — your answer settled it', 'Kiitos – vastauksesi ratkaisi asian'),
       body: card.title,
       deep_link: { screen: 'queue', card_id: card.id, document_id: null }
     });
@@ -232,7 +232,8 @@ const startParseRun = (book, doc) => {
       parse.parse_status = 'failed';
       parse.parse_error = {
         code: 'DOCUMENT_EXTRACTION_UNREADABLE',
-        safe_user_message: 'This photo was too blurry to read. A flatter, closer shot usually works.',
+        safe_user_message: demoCopy('This photo was too blurry to read. A flatter, closer shot usually works.',
+          'Kuva oli liian epäselvä. Kokeile kuvata kuitti suorana ja lähempää.'),
         retryable: true
       };
       doc.capture_state = 'failed';
@@ -247,8 +248,8 @@ const startParseRun = (book, doc) => {
         entity_id: book.entity.id,
         class: 'ask',
         state: 'open',
-        title: `What was ${doc.filename} for?`,
-        detail: 'New capture',
+        title: demoCopy(`What was ${doc.filename} for?`, `Mihin ${doc.filename} liittyy?`),
+        detail: demoCopy('New capture', 'Uusi tiedosto'),
         occurred_on: null,
         created_at: new Date().toISOString(),
         amount: null,
@@ -259,7 +260,8 @@ const startParseRun = (book, doc) => {
         document_id: doc.id,
         source: { kind: 'client_evidence_request', id: uid('ask') },
         ask: {
-          question: `Donna read ${doc.filename} but couldn’t tell what it was for. A few words is plenty.`,
+          question: demoCopy(`Donna read ${doc.filename} but couldn’t tell what it was for. A few words is plenty.`,
+            `Donna luki tiedoston ${doc.filename}, mutta ei saanut selville, mihin se liittyy. Muutama sana riittää.`),
           evidence_type: 'business_purpose',
           allows_text: true,
           allows_documents: false,
@@ -273,7 +275,7 @@ const startParseRun = (book, doc) => {
       doc.needs_info_card_id = askCard.id;
       pushActivity(book, {
         kind: 'card_created',
-        title: '1 new question about a capture',
+        title: demoCopy('1 new question about a capture', '1 uusi kysymys lisäämästäsi tiedostosta'),
         deep_link: { screen: 'queue', card_id: askCard.id, document_id: doc.id }
       });
       return;
@@ -281,7 +283,7 @@ const startParseRun = (book, doc) => {
     doc.capture_state = 'attached';
     pushActivity(book, {
       kind: 'document_attached',
-      title: `${doc.filename} is in your books`,
+      title: demoCopy(`${doc.filename} is in your books`, `${doc.filename} on nyt kirjanpidossasi`),
       deep_link: { screen: 'capture', card_id: null, document_id: doc.id }
     });
   }, 1600);
@@ -294,7 +296,7 @@ const recordMileageIntoBook = (book, { date, distance, unit, purpose }) => {
     entity_id: book.entity.id,
     class: 'fyi',
     state: 'done',
-    title: `Logged ${distance} ${unit} — ${purpose}`,
+    title: demoCopy(`Logged ${distance} ${unit} — ${purpose}`, `Kirjattu ${fiNumber(distance)} ${unit} – ${purpose}`),
     detail: null,
     occurred_on: date,
     created_at: new Date().toISOString(),
@@ -306,7 +308,8 @@ const recordMileageIntoBook = (book, { date, distance, unit, purpose }) => {
     document_id: null,
     source: { kind: 'mileage_record', id: uid('mile') },
     fyi: {
-      description: `A ${distance} ${unit} business journey on ${date} (“${purpose}”) is in your books at the standard rate.`,
+      description: demoCopy(`A ${distance} ${unit} business journey on ${date} (“${purpose}”) is in your books at the standard rate.`,
+        `Työajo ${fiDate(date)}, ${fiNumber(distance)} ${unit} (”${purpose}”), on kirjattu kirjanpitoosi kilometrikorvauksen vakiotaksalla.`),
       done_at: new Date().toISOString(),
       corrective_verbs: ['veto_flag'],
       marked_wrong_at: null
@@ -314,7 +317,8 @@ const recordMileageIntoBook = (book, { date, distance, unit, purpose }) => {
   };
   book.cards.unshift(fyi);
   return {
-    receipt: receipt(`Logged ${distance} ${unit} for “${purpose}” — it’s in your books.`, [fyi.id]),
+    receipt: receipt(demoCopy(`Logged ${distance} ${unit} for “${purpose}” — it’s in your books.`,
+      `Kirjattu ${fiNumber(distance)} ${unit} (”${purpose}”). Matka on nyt kirjanpidossasi.`), [fyi.id]),
     card: fyi
   };
 };
@@ -349,9 +353,9 @@ const mintChatActions = (book, text) => {
     actions.push({
       id,
       kind: 'record_mileage',
-      label: demoCopy(`Log ${distance} ${unit} — business journey`, `Kirjaa ${distance} ${unit} – työajo`),
+      label: demoCopy(`Log ${distance} ${unit} — business journey`, `Kirjaa ${fiNumber(distance)} ${unit} – työajo`),
       summary: demoCopy(`I’ll put a ${distance} ${unit} journey in your books at the standard rate, dated today.`,
-        `Kirjaan kirjanpitoosi tälle päivälle ${distance} ${unit} työajoa kilometrikorvauksen vakiotaksalla.`),
+        `Kirjaan kirjanpitoosi tälle päivälle ${fiNumber(distance)} ${unit} työajoa kilometrikorvauksen vakiotaksalla.`),
       state: 'available',
       applied_at: null
     });
@@ -470,9 +474,11 @@ const decide = (book, card, body) => {
         receipt: receipt(
           type === 'approve'
             ? demoCopy('Approved and executed. The result is in Books.', 'Hyväksytty ja toteutettu. Tulos näkyy kirjanpidossa.')
-            : `Declined${body?.note ? ` — noted: “${body.note.trim()}”` : ''}. Nothing was sent.`,
+            : demoCopy(`Declined${body?.note ? ` — noted: “${body.note.trim()}”` : ''}. Nothing was sent.`,
+              `Hylätty${body?.note ? `. Huomiosi on kirjattu: ”${body.note.trim()}”` : ''}. Mitään ei lähetetty.`),
           [card.source.kind + ':' + card.source.id],
-          [{ name: 'authority', status: 'pass', detail: 'Owner decision recorded with actor attribution.' }]
+          [{ name: 'authority', status: 'pass', detail: demoCopy('Owner decision recorded with actor attribution.',
+            'Päätöksesi on kirjattu nimissäsi.') }]
         )
       }
     };
@@ -492,7 +498,8 @@ const decide = (book, card, body) => {
         already: null,
         card,
         receipt: receipt(
-          'Flagged. Donna will unwind this and learn from the correction — nothing else changes until she does.',
+          demoCopy('Flagged. Donna will unwind this and learn from the correction — nothing else changes until she does.',
+            'Merkitty vääräksi. Donna peruu tämän ja oppii korjauksesta. Muu ei muutu sillä välin.'),
           [card.source.kind + ':' + card.source.id]
         )
       }
@@ -504,7 +511,9 @@ const decide = (book, card, body) => {
 
 // ── HTTP plumbing ──────────────────────────────────────────────────────────
 const json = (res, status, body) => {
-  const payload = JSON.stringify(body);
+  // Every error message crosses here, so the Finnish demo translates them in one place.
+  const payload = JSON.stringify(status >= 400 && typeof body?.error === 'string'
+    ? { ...body, error: localizeError(body.error) } : body);
   res.writeHead(status, {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*',
@@ -632,8 +641,9 @@ const server = http.createServer(async (req, res) => {
     if (!activeAccount.deletionRequestedAt) activeAccount.deletionRequestedAt = new Date().toISOString();
     return json(res, 200, {
       requested_at: activeAccount.deletionRequestedAt,
-      message:
-        'Your deletion request is recorded. Your books stay readable for the statutory retention period for your jurisdiction, then everything is erased — you’ll get a confirmation when it’s done. (Demo books: the mock resets on restart.)'
+      message: demoCopy(
+        'Your deletion request is recorded. Your books stay readable for the statutory retention period for your jurisdiction, then everything is erased — you’ll get a confirmation when it’s done. (Demo books: the mock resets on restart.)',
+        'Poistopyyntösi on kirjattu. Kirjanpitosi pysyy luettavana lain vaatiman säilytysajan, ja sen jälkeen kaikki poistetaan. Saat vahvistuksen, kun poisto on tehty. (Esimerkkikirjanpito palautuu alkutilaan, kun palvelin käynnistetään uudelleen.)')
     });
   }
 
@@ -658,7 +668,7 @@ const server = http.createServer(async (req, res) => {
       if (method === 'POST') {
         try {
           const settings = updateSettings(book, activeAccount.principal.id, body);
-          return json(res, 200, { settings, receipt: receipt('Preview settings saved. No external action or authority granted.', [`entity:${entityId}:settings`]) });
+          return json(res, 200, { settings, receipt: receipt(demoCopy('Preview settings saved. No external action or authority granted.', 'Esikatselun asetukset tallennettu. Mitään ei lähetetty eikä valtuuksia annettu.'), [`entity:${entityId}:settings`]) });
         } catch { return json(res, 400, { error: 'Settings could not be saved.', code: 'SETTINGS_INVALID' }); }
       }
     }
@@ -671,7 +681,7 @@ const server = http.createServer(async (req, res) => {
           return json(res, 200, stageRegistryCandidate(book, await lookupBusiness(body?.business_id)));
         }
         if (method === 'POST' && rest === '/business-setup') {
-          return json(res, 200, { setup: updateBusinessSetup(book, body), receipt: receipt('Business setup preference saved. No authority granted.', [`entity:${entityId}:setup`]) });
+          return json(res, 200, { setup: updateBusinessSetup(book, body), receipt: receipt(demoCopy('Business setup preference saved. No authority granted.', 'Yritystietojen valinta tallennettu. Valtuuksia ei annettu.'), [`entity:${entityId}:setup`]) });
         }
       } catch (cause) {
         if (cause instanceof SetupError) return json(res, cause.status, { error: 'Business setup could not be updated.', code: cause.code });
@@ -777,7 +787,7 @@ const server = http.createServer(async (req, res) => {
         book.entity = result.entity;
         return json(res, 200, {
           ...result,
-          receipt: receipt('Your reviewed business profile was confirmed.', [
+          receipt: receipt(demoCopy('Your reviewed business profile was confirmed.', 'Tarkistamasi yritystiedot on vahvistettu.'), [
             `principal:${result.principal.id}`,
             `entity:${result.entity.id}`
           ])
