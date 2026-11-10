@@ -1,6 +1,6 @@
 // Static copy transcribed from the user-supplied Settings handoff.
 // Dated safety corrections and unavailable capabilities: design/SETTINGS-REFINEMENT.md.
-import { getLocale } from "./index";
+import { getBrandName, getLocale, type Locale } from "./index";
 
 export type SettingsPage =
   | "home"
@@ -39,7 +39,18 @@ export type SettingsPageCopy = {
   ctaAlert?: boolean;
   foot?: string;
 };
-const copy = {
+type SettingsLocaleCopy = {
+  cancel: string;
+  signOut: string;
+  signOutBody: string;
+  terms: string;
+  privacy: string;
+} & Record<SettingsPage, SettingsPageCopy>;
+/**
+ * Both locales typed alike, and checked for string, placeholder and row
+ * parity by core/screens/i18nParity.test.ts. `{brand}` comes from the shell.
+ */
+export const settingsLocales: Record<Locale, SettingsLocaleCopy> = {
   fi: {
     cancel: "Peruuta",
     signOut: "Kirjaudu ulos",
@@ -99,7 +110,7 @@ const copy = {
           ],
         },
         {
-          title: "Donna",
+          title: "{brand}",
           rows: [
             {
               icon: "bell",
@@ -172,7 +183,7 @@ const copy = {
     business: {
       eyebrow: "Asetukset",
       title: "Yrityksen tiedot",
-      lead: "Näin Donna ymmärtää yrityksesi. Napauta tietoa, korjaa ja tallenna.",
+      lead: "Näin {brand} ymmärtää yrityksesi. Napauta tietoa, korjaa ja tallenna.",
       sections: [
         {
           title: "Perustiedot",
@@ -354,7 +365,7 @@ const copy = {
       ],
     },
     language: {
-      eyebrow: "Donna",
+      eyebrow: "{brand}",
       title: "Kieli",
       lead: "Kieli, jolla puhun ja kirjoitan sinulle.",
       sections: [
@@ -384,9 +395,9 @@ const copy = {
       ],
     },
     bank: {
-      eyebrow: "Donna",
+      eyebrow: "{brand}",
       title: "Pankki",
-      lead: "Pankkiyhteys tuo tilitapahtumat suoraan Donnalle. Yhteys otetaan käyttöön vasta, kun olet antanut luvan.",
+      lead: "Pankkiyhteyden kautta {brand} saa tilitapahtumat suoraan. Yhteys otetaan käyttöön vasta, kun olet antanut luvan.",
       sections: [
         {
           title: "Mitä saan",
@@ -438,7 +449,7 @@ const copy = {
       ],
     },
     omavero: {
-      eyebrow: "Donna",
+      eyebrow: "{brand}",
       title: "OmaVero",
       lead: "Täältä voit myöhemmin yhdistää verotietosi. Valtuuden sisältö tarkistetaan ennen sen antamista.",
       sections: [
@@ -482,7 +493,7 @@ const copy = {
       foot: "Suomi.fi-yhteyttä ei ole vielä toteutettu. Mitään valtuutta ei anneta tästä esikatselusta.",
     },
     accountant: {
-      eyebrow: "Donna",
+      eyebrow: "{brand}",
       title: "Kirjanpitäjä",
       lead: "Jaa kirjanpitäjällesi pääsy. Hän näkee saman kuin sinä ja voi kommentoida – ei muuttaa mitään ilman lupaasi.",
       sections: [
@@ -697,7 +708,7 @@ const copy = {
           ],
         },
         {
-          title: "Donna",
+          title: "{brand}",
           rows: [
             {
               icon: "bell",
@@ -770,7 +781,7 @@ const copy = {
     business: {
       eyebrow: "Settings",
       title: "Business details",
-      lead: "This is how Donna understands your business. Tap a detail, correct it and save.",
+      lead: "This is how {brand} understands your business. Tap a detail, correct it and save.",
       sections: [
         {
           title: "Basics",
@@ -952,7 +963,7 @@ const copy = {
       ],
     },
     language: {
-      eyebrow: "Donna",
+      eyebrow: "{brand}",
       title: "Language",
       lead: "The language I speak and write to you in.",
       sections: [
@@ -982,9 +993,9 @@ const copy = {
       ],
     },
     bank: {
-      eyebrow: "Donna",
+      eyebrow: "{brand}",
       title: "Bank",
-      lead: "A bank connection brings transactions directly to Donna. It is enabled only after you grant access.",
+      lead: "A bank connection brings transactions directly to {brand}. It is enabled only after you grant access.",
       sections: [
         {
           title: "What I get",
@@ -1036,7 +1047,7 @@ const copy = {
       ],
     },
     omavero: {
-      eyebrow: "Donna",
+      eyebrow: "{brand}",
       title: "OmaVero",
       lead: "You’ll be able to connect your tax information here. The scope of any mandate must be checked before you grant it.",
       sections: [
@@ -1080,7 +1091,7 @@ const copy = {
       foot: "The Suomi.fi connection is not implemented yet. This preview does not grant a mandate.",
     },
     accountant: {
-      eyebrow: "Donna",
+      eyebrow: "{brand}",
       title: "Accountant",
       lead: "Share access with your accountant. They see what you see and can comment — never change anything without your say.",
       sections: [
@@ -1238,9 +1249,24 @@ const copy = {
     },
   },
 };
+const fill = (text: string, tokens?: Record<string, string>): string => {
+  const merged: Record<string, string> = { brand: getBrandName(), ...tokens };
+  return text.replace(/\{(\w+)\}/g, (match, name) => merged[name] ?? match);
+};
+const fillAll = <T,>(node: T): T =>
+  (typeof node === "string"
+    ? fill(node)
+    : Array.isArray(node)
+      ? node.map(fillAll)
+      : node && typeof node === "object"
+        ? Object.fromEntries(
+            Object.entries(node).map(([key, value]) => [key, fillAll(value)]),
+          )
+        : node) as T;
 export const settingsCopy = (page: SettingsPage): SettingsPageCopy =>
-  copy[getLocale()][page];
-const extra = {
+  fillAll(settingsLocales[getLocale()][page]);
+/** `[fi, en]` pairs; parity-checked with the page copy above. */
+export const settingsPairs = {
   add: ["Lisää", "Add"],
   unknown: ["Ei vielä vahvistettu", "Not confirmed yet"],
   unavailable: ["Ei vielä käytössä", "Not available yet"],
@@ -1335,9 +1361,6 @@ const extra = {
   currentLanguage: ["Suomi", "English"],
 } as const;
 export const settingsText = (
-  key: keyof typeof extra,
+  key: keyof typeof settingsPairs,
   tokens?: Record<string, string>,
-): string => {
-  const raw = extra[key][getLocale() === "fi" ? 0 : 1];
-  return raw.replace(/\{(\w+)\}/g, (match, name) => tokens?.[name] ?? match);
-};
+): string => fill(settingsPairs[key][getLocale() === "fi" ? 0 : 1], tokens);

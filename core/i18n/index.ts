@@ -22,6 +22,7 @@ export const getLocale = (): Locale => activeLocale;
 export const setBrandName = (name: string) => {
   activeBrand = name;
 };
+export const getBrandName = (): string => activeBrand;
 
 type Leaves<T, Prefix extends string = ''> = {
   [K in keyof T & string]: T[K] extends string
