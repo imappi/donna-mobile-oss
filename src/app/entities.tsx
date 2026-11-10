@@ -3,6 +3,7 @@ import { Redirect, useRouter } from 'expo-router';
 import { EntitiesScreen } from '@core/screens/EntitiesScreen';
 import { entityGate } from '@/state/entityGate';
 import { useSession } from '@/state/session';
+import { backOrBooks } from '@/state/backOrBooks';
 
 export default function EntitiesRoute() {
   const { state, switchEntity } = useSession();
@@ -19,9 +20,9 @@ export default function EntitiesRoute() {
       activeEntityId={state.entityId}
       onPick={(entityId) => {
         switchEntity(entityId);
-        router.back();
+        backOrBooks(router);
       }}
-      onBack={() => router.back()}
+      onBack={() => backOrBooks(router)}
     />
   );
 }
