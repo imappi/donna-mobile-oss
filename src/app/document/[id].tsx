@@ -9,6 +9,7 @@ import { DocumentDetailScreen } from '@core/screens/DocumentDetailScreen';
 import { useArtifactConversation } from '@/state/hooks';
 import { EntityRoute } from '@/state/EntityRoute';
 import { useEntityId, useSession } from '@/state/session';
+import { backOrBooks } from '@/state/backOrBooks';
 
 const SignedInDocumentRoute = () => {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -40,7 +41,7 @@ const SignedInDocumentRoute = () => {
     onSuccess: (_result, action) => {
       queryClient.invalidateQueries({ queryKey: ['documents', entityId] });
       if (action === 'cancel') {
-        router.back();
+        backOrBooks(router);
         return;
       }
       document.refetch();
@@ -77,7 +78,7 @@ const SignedInDocumentRoute = () => {
       onRetry={() => retry.mutate()}
       onResolveDuplicate={(action) => resolveDuplicate.mutate(action)}
       onApplyAction={(action) => applyAction.mutate(action)}
-      onBack={() => router.back()}
+      onBack={() => backOrBooks(router)}
     />
   );
 };

@@ -11,6 +11,7 @@ import { useCaptureQueue } from '@/state/captureQueue';
 import { useArtifactConversation, useDecide } from '@/state/hooks';
 import { EntityRoute } from '@/state/EntityRoute';
 import { useEntityId, useSession } from '@/state/session';
+import { backOrBooks } from '@/state/backOrBooks';
 
 const SignedInCardRoute = () => {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -107,7 +108,7 @@ const SignedInCardRoute = () => {
       attaching={attaching}
       applyingActionId={applyAction.isPending ? applyAction.variables?.id ?? null : null}
       onApplyAction={(action) => applyAction.mutate(action)}
-      onBack={() => router.back()}
+      onBack={() => backOrBooks(router)}
     />
   );
 };

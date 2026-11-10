@@ -54,7 +54,7 @@ export const t = (key: StringKey, tokens?: Record<string, string | number>): str
  */
 export const formatMoney = (amount: number, currency: string): string => {
   try {
-    return new Intl.NumberFormat(activeLocale === 'fi' ? 'fi-FI' : 'en-GB', {
+    return new Intl.NumberFormat(intlLocale(), {
       style: 'currency',
       currency,
       currencyDisplay: 'symbol'
@@ -71,7 +71,7 @@ export const formatDate = (isoDate: string): string => {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate || '');
   if (!m) return '';
   const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-  return new Intl.DateTimeFormat(activeLocale === 'fi' ? 'fi-FI' : 'en-GB', {
+  return new Intl.DateTimeFormat(intlLocale(), {
     day: 'numeric',
     month: 'short'
   }).format(d);
@@ -117,13 +117,49 @@ export const parseNumericDate = (input: string): ParsedDate => {
 };
 
 const numericDateFormat = () =>
-  new Intl.DateTimeFormat(activeLocale === 'fi' ? 'fi-FI' : 'en-GB', { day: 'numeric', month: 'numeric', year: 'numeric' });
+  new Intl.DateTimeFormat(intlLocale(), { day: 'numeric', month: 'numeric', year: 'numeric' });
+
+/** A plain number as the owner's language writes it: 12,5 (fi), 12.5 (en). Up to three decimals. */
+export const formatNumber = (value: number): string =>
+  new Intl.NumberFormat(intlLocale(), { maximumFractionDigits: 3 }).format(value);
+
+export type ParsedDecimal = { ok: true; value: number } | { ok: false };
+
+/**
+ * Read a number the owner typed the way their language writes it and return
+ * the plain JSON number the contract wants. The decimal and grouping marks
+ * come from Intl, as formatNumber prints them:
+ * - Finnish: decimal comma (a point is also read as the decimal, since a
+ *   phone keyboard set to another language may offer only a point and
+ *   Finnish never groups with one); thousands grouped by a space or
+ *   no-break space, as in 1 250,5.
+ * - English: decimal point; a comma groups whole thousands only (1,250.5).
+ *   A comma anywhere else ("12,5") is refused rather than guessed at.
+ * No signs, exponents, hex or words: anything else is { ok: false }.
+ */
+export const parseDecimal = (input: string): ParsedDecimal => {
+  const value = (input ?? '').trim();
+  const parts = new Intl.NumberFormat(intlLocale()).formatToParts(12345.6);
+  const decimal = parts.find(part => part.type === 'decimal')?.value ?? '.';
+  const group = parts.find(part => part.type === 'group')?.value ?? ',';
+  const spaceGroup = /\s/.test(group);
+  const decimals = decimal === ',' && spaceGroup ? '[,.]' : escapeRegExp(decimal);
+  const groups = spaceGroup ? '[ \\u00a0\\u202f]' : escapeRegExp(group);
+  const match = new RegExp(`^(\\d{1,3}(?:${groups}\\d{3})+|\\d*)(?:${decimals}(\\d+))?$`).exec(value);
+  if (!match || (!match[1] && !match[2])) return { ok: false };
+  const whole = match[1].replace(/\D/g, '') || '0';
+  const number = Number(match[2] ? `${whole}.${match[2]}` : whole);
+  return Number.isFinite(number) ? { ok: true, value: number } : { ok: false };
+};
+
+const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
+const intlLocale = () => (activeLocale === 'fi' ? 'fi-FI' : 'en-GB');
 
 /** Quiet receipt timestamps use the handoff's 24-hour HH:mm clock. */
 export const formatReceiptTime = (timestamp: string): string => {
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) return '';
-  const parts = new Intl.DateTimeFormat(activeLocale === 'fi' ? 'fi-FI' : 'en-GB', {
+  const parts = new Intl.DateTimeFormat(intlLocale(), {
     hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
   }).formatToParts(date);
   return ['hour', 'minute'].map(type => parts.find(part => part.type === type)?.value ?? '').join(':');
@@ -134,7 +170,7 @@ export const formatMonth = (isoMonth: string, monthOnly = false): string => {
   const m = /^(\d{4})-(\d{2})$/.exec(isoMonth || '');
   if (!m) return t('home.undated');
   const d = new Date(Number(m[1]), Number(m[2]) - 1, 1);
-  const formatted = new Intl.DateTimeFormat(activeLocale === 'fi' ? 'fi-FI' : 'en-GB', {
+  const formatted = new Intl.DateTimeFormat(intlLocale(), {
     month: 'long',
     ...(monthOnly ? {} : { year: 'numeric' as const })
   }).format(d);

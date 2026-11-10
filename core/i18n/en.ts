@@ -331,11 +331,14 @@ export const en = {
   mileage: {
     title: 'Log mileage',
     distance: 'Distance',
+    distanceFormat: 'Write the distance as a number, like {example}.',
+    distancePositive: 'The distance has to be more than zero.',
     date: 'Date (dd/mm/yyyy)',
     dateFormat: 'Write the date as {example}.',
     dateImpossible: '{date} is not a date in the calendar.',
     purpose: 'What was the trip for?',
-    save: 'Log it'
+    save: 'Log it',
+    saveError: 'The trip was not logged. Try again in a moment.'
   },
   queue: {
     title: 'Actions',
