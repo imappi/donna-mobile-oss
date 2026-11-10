@@ -6,7 +6,7 @@ import { getLocale } from '@core/i18n';
 import { notificationPermissionGranted } from './notificationPermission';
 import { readDevicePreferences } from './devicePreferences';
 import { pushProjectId } from './pushProjectId';
-import { androidChannelName, submitRegistration, type StoredRegistration } from './pushRegistrationFlow';
+import { androidChannelName, removeRegistrations, submitRegistration, type StoredRegistration } from './pushRegistrationFlow';
 import { shell } from '@/shell';
 
 /**
@@ -19,7 +19,8 @@ import { shell } from '@/shell';
  * backend always knows every business the owner can see. Idempotency lives
  * server-side: the backend upserts on (principal, token), answers the same
  * id and writes nothing when nothing changed (contract/DESIGN-NOTES.md).
- * The stored pair {id, token} only lets sign-out DELETE the registration.
+ * The stored {id, token} only lets sign-out DELETE the registration; a
+ * rotated token's leftover registration is removed by submitRegistration.
  */
 const REG_KEY = 'donna.push.registration';
 
@@ -62,6 +63,7 @@ export const registerPush = async (api: ApiClient, requestPermission = false): P
     await submitRegistration(
       {
         api,
+        readStored,
         writeStored: (registration) => SecureStore.setItemAsync(REG_KEY, JSON.stringify(registration))
       },
       { platform: Platform.OS, expo_push_token: token, locale: getLocale() }
@@ -77,6 +79,8 @@ export const unregisterPush = async (api: ApiClient): Promise<void> => {
   try {
     const stored = await readStored();
     if (!stored) return;
+    // Leftovers of a rotated token go too; they are best-effort and never block sign-out.
+    await removeRegistrations(api, stored.replaced_ids ?? []);
     await api.unregisterFromPush(stored.id);
     await SecureStore.deleteItemAsync(REG_KEY);
   } catch (e) {

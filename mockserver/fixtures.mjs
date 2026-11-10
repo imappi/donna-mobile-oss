@@ -20,7 +20,13 @@ export const monthDay = (offset, day, now = new Date()) => {
   return new Date(now.getFullYear(), now.getMonth() + offset, Math.min(day, last), 12);
 };
 const monthName = (date) => date.toLocaleDateString('en-GB', { month: 'long' });
-const previousMonthName = (date) => monthName(new Date(date.getFullYear(), date.getMonth() - 1, 1));
+const previousMonth = (date) => new Date(date.getFullYear(), date.getMonth() - 1, 1);
+const previousMonthName = (date) => monthName(previousMonth(date));
+// Filenames carry their own date the way people name scans: "-04aug", "-aug".
+// Always derived from the record's date, so a filename never disagrees with it.
+const SHORT_MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+const mon = (date) => SHORT_MONTHS[date.getMonth()];
+const dayMon = (date) => `${pad(date.getDate())}${mon(date)}`;
 
 export const ENTITY = {
   id: 'ent-fernwood',
@@ -450,42 +456,45 @@ const doc = (partial) => ({
 
 export const buildDocuments = () => {
   const attached = [
-    ['doc-r01', 'receipt-harbour-timber-04aug.jpg', 'receipt', 8, 'Harbour Timber Supplies', -486.2],
-    ['doc-r02', 'receipt-atelier-fabrics-02aug.jpg', 'receipt', 10, 'Atelier Fabrics', -158.0],
-    ['doc-r03', 'receipt-brightpost-20aug.jpg', 'receipt', 6, 'Brightpost Couriers', -36.9],
-    ['doc-r04', 'fuel-meadow-28jul.jpg', 'receipt', 13, 'Meadow Fuel Station', -88.1],
-    ['doc-r05', 'receipt-cafe-verano-11aug.jpg', 'receipt', 15, 'Café Verano', -42.5],
-    ['doc-r06', 'cloudbill-invoice-aug.pdf', 'supplier_bill', 5, 'Cloudbill', -29.0],
-    ['doc-r07', 'loop-mobile-aug.pdf', 'supplier_bill', 5, 'Loop Mobile', -45.0],
-    ['doc-r08', 'greenlane-electric-jul.pdf', 'supplier_bill', 19, 'Greenlane Electric', -164.7],
+    ['doc-r01', (d) => `receipt-harbour-timber-${dayMon(d)}.jpg`, 'receipt', 8, 'Harbour Timber Supplies', -486.2],
+    ['doc-r02', (d) => `receipt-atelier-fabrics-${dayMon(d)}.jpg`, 'receipt', 10, 'Atelier Fabrics', -158.0],
+    ['doc-r03', (d) => `receipt-brightpost-${dayMon(d)}.jpg`, 'receipt', 6, 'Brightpost Couriers', -36.9],
+    ['doc-r04', (d) => `fuel-meadow-${dayMon(d)}.jpg`, 'receipt', 13, 'Meadow Fuel Station', -88.1],
+    ['doc-r05', (d) => `receipt-cafe-verano-${dayMon(d)}.jpg`, 'receipt', 15, 'Café Verano', -42.5],
+    ['doc-r06', (d) => `cloudbill-invoice-${mon(d)}.pdf`, 'supplier_bill', 5, 'Cloudbill', -29.0],
+    ['doc-r07', (d) => `loop-mobile-${mon(d)}.pdf`, 'supplier_bill', 5, 'Loop Mobile', -45.0],
+    ['doc-r08', (d) => `greenlane-electric-${mon(d)}.pdf`, 'supplier_bill', 19, 'Greenlane Electric', -164.7],
     ['doc-r09', 'northgate-policy-2026.pdf', 'contract', 12, 'Northgate Insurance', -640.0],
     ['doc-r10', 'inv-2036-rowan-chase.pdf', 'sales_invoice', 30, 'Rowan & Chase', 540.0],
     ['doc-r11', 'inv-2037-kestrel-studio.pdf', 'sales_invoice', 27, 'Kestrel Studio', 680.0],
     ['doc-r12', 'inv-2038-harbour-joinery.pdf', 'sales_invoice', 18, 'Harbour Joinery', 1450.0],
-    ['doc-r13', 'bank-statement-jul.pdf', 'bank_statement', 16, null, null],
-    ['doc-r14', 'receipt-quayside-22aug.jpg', 'receipt', 4, 'Quayside Parking', -4.5],
-    ['doc-r15', 'receipt-harbour-timber-19aug.jpg', 'receipt', 7, 'Harbour Timber Supplies', -102.6],
+    // A statement is named for the month it covers: the one before it was issued.
+    ['doc-r13', (d) => `bank-statement-${mon(previousMonth(d))}.pdf`, 'bank_statement', 16, null, null],
+    ['doc-r14', (d) => `receipt-quayside-${dayMon(d)}.jpg`, 'receipt', 4, 'Quayside Parking', -4.5],
+    ['doc-r15', (d) => `receipt-harbour-timber-${dayMon(d)}.jpg`, 'receipt', 7, 'Harbour Timber Supplies', -102.6],
     ['doc-r16', 'foam-supplier-quote.pdf', 'contract', 22, 'Bram Foam Works', null],
-    ['doc-r17', 'receipt-workshop-tools-15aug.jpg', 'receipt', 11, 'Toolhouse', -74.9],
+    ['doc-r17', (d) => `receipt-workshop-tools-${dayMon(d)}.jpg`, 'receipt', 11, 'Toolhouse', -74.9],
     ['doc-r18', 'inv-2039-atelier-north.pdf', 'sales_invoice', 14, 'Atelier North', 320.0],
-    ['doc-r19', 'receipt-fabric-dye-09aug.jpg', 'receipt', 17, 'Atelier Fabrics', -63.2],
-    ['doc-r20', 'bank-statement-jun.pdf', 'bank_statement', 46, null, null],
+    ['doc-r19', (d) => `receipt-fabric-dye-${dayMon(d)}.jpg`, 'receipt', 17, 'Atelier Fabrics', -63.2],
+    ['doc-r20', (d) => `bank-statement-${mon(previousMonth(d))}.pdf`, 'bank_statement', 46, null, null],
     ['doc-r21', 'inv-2040-harbour-joinery.pdf', 'sales_invoice', 9, 'Harbour Joinery', 890.0],
-    ['doc-r22', 'receipt-cafe-verano-23aug.jpg', 'receipt', 3, 'Café Verano', -84.0]
-  ].map(([id, filename, type, age, party, amount]) =>
-    doc({
+    ['doc-r22', (d) => `receipt-cafe-verano-${dayMon(d)}.jpg`, 'receipt', 3, 'Café Verano', -84.0]
+  ].map(([id, filename, type, age, party, amount]) => {
+    const date = daysAgo(id === 'doc-r22' ? age : age + 1);
+    return doc({
       id,
-      filename,
+      filename: typeof filename === 'function' ? filename(date) : filename,
       capture_state: 'attached',
       uploaded_at: tsDaysAgo(age),
       captured_at: tsDaysAgo(age),
       document_type: type,
-      document_date: isoDate(daysAgo(id === 'doc-r22' ? age : age + 1)),
+      document_date: isoDate(date),
       total_amount: amount,
       currency: amount != null ? 'EUR' : null,
       counterparty: party
-    })
-  );
+    });
+  });
+  const cafeVerano = attached.find((d) => d.id === 'doc-r22');
 
   const inFlight = [
     doc({
@@ -498,7 +507,7 @@ export const buildDocuments = () => {
     }),
     doc({
       id: 'doc-p02',
-      filename: 'bank-statement-aug-partial.pdf',
+      filename: `bank-statement-${mon(daysAgo(0))}-partial.pdf`,
       capture_state: 'processing',
       uploaded_at: tsDaysAgo(0),
       document_type: 'bank_statement'
@@ -523,7 +532,7 @@ export const buildDocuments = () => {
     }),
     doc({
       id: 'doc-n02',
-      filename: 'receipt-blurry-13aug.jpg',
+      filename: `receipt-blurry-${dayMon(daysAgo(13))}.jpg`,
       capture_state: 'needs_info',
       uploaded_at: tsDaysAgo(13),
       document_type: 'receipt',
@@ -547,7 +556,7 @@ export const buildDocuments = () => {
     }),
     doc({
       id: 'doc-d01',
-      filename: 'receipt-cafe-verano-23aug-2.jpg',
+      filename: cafeVerano.filename.replace(/\.jpg$/, '-2.jpg'),
       capture_state: 'duplicate',
       uploaded_at: tsDaysAgo(1),
       document_type: 'receipt',
@@ -691,7 +700,7 @@ export const buildSecondBook = () => {
     doc({
       entity_id: ENTITY_2.id,
       id: 'doc-h01',
-      filename: 'rent-invoice-rowanberry-aug.pdf',
+      filename: `rent-invoice-rowanberry-${mon(daysAgo(3))}.pdf`,
       capture_state: 'attached',
       uploaded_at: tsDaysAgo(3),
       captured_at: tsDaysAgo(3),
@@ -704,7 +713,7 @@ export const buildSecondBook = () => {
     doc({
       entity_id: ENTITY_2.id,
       id: 'doc-h02',
-      filename: 'boiler-service-jul.pdf',
+      filename: `boiler-service-${mon(daysAgo(25))}.pdf`,
       capture_state: 'attached',
       uploaded_at: tsDaysAgo(24),
       captured_at: tsDaysAgo(24),
@@ -767,7 +776,7 @@ export const buildSecondBook = () => {
 };
 
 // ── Activity ───────────────────────────────────────────────────────────────
-export const buildActivity = () => [
+export const buildActivity = (documents = buildDocuments()) => [
   {
     id: 'ev-001',
     at: tsDaysAgo(0),
@@ -788,7 +797,7 @@ export const buildActivity = () => [
     id: 'ev-003',
     at: tsDaysAgo(2),
     kind: 'document_attached',
-    title: 'receipt-quayside-22aug.jpg is in your books',
+    title: `${documents.find((d) => d.id === 'doc-r14').filename} is in your books`,
     body: null,
     deep_link: { screen: 'capture', card_id: null, document_id: 'doc-r14' }
   },
@@ -796,7 +805,7 @@ export const buildActivity = () => [
     id: 'ev-004',
     at: tsDaysAgo(4),
     kind: 'period_update',
-    title: 'July is ready to close',
+    title: `${previousMonthName(daysAgo(4))} is ready to close`,
     body: 'Everything reconciled. Donna will close it on the 5th unless you say otherwise.',
     deep_link: { screen: 'status', card_id: null, document_id: null }
   },
@@ -804,8 +813,33 @@ export const buildActivity = () => [
     id: 'ev-005',
     at: tsDaysAgo(9),
     kind: 'digest',
-    title: 'Your July summary',
+    title: `Your ${previousMonthName(daysAgo(9))} summary`,
     body: 'Income €4,980 · Spending €2,210 · 3 questions answered.',
     deep_link: { screen: 'status', card_id: null, document_id: null }
   }
 ];
+
+// ── Chat ───────────────────────────────────────────────────────────────────
+export const buildChat = () => {
+  const welcomeAt = new Date(Date.now() - 3600e3);
+  return [
+    {
+      id: 'msg-welcome',
+      author: 'donna',
+      text: `Morning Sam. ${monthName(welcomeAt)} is moving along — three purchases need a receipt or a quick fact from you. Everything else is in my hands.`,
+      at: welcomeAt.toISOString()
+    },
+    {
+      id: 'msg-owner-vat',
+      author: 'owner',
+      text: 'Do I owe VAT on the fabric order?',
+      at: new Date(Date.now() - 1800e3).toISOString()
+    },
+    {
+      id: 'msg-donna-vat',
+      author: 'donna',
+      text: 'The standard rate applies unless the receipt says otherwise. Send it here and I’ll check the source before I post anything.',
+      at: new Date(Date.now() - 1200e3).toISOString()
+    }
+  ];
+};

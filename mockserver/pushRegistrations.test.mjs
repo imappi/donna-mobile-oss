@@ -29,7 +29,7 @@ test('registering the same token again returns the same id and writes nothing', 
   assert.equal(regs.get(first), null);
 });
 
-test('mock HTTP: repeat registration on sign-in answers the same id; DELETE decodes the id', async (t) => {
+test('mock HTTP: repeat registration on sign-in answers the same id; DELETE decodes the id and refuses a foreign one', async (t) => {
   const server = spawn(process.execPath, ['mockserver/server.mjs'], {
     cwd: new URL('..', import.meta.url),
     env: { ...process.env, PORT: '0', OPENAI_API_KEY: '' },
@@ -70,6 +70,16 @@ test('mock HTTP: repeat registration on sign-in answers the same id; DELETE deco
   const again = await call('POST', '/notifications/registrations', await signIn(), reg);
   assert.equal(again.status, 201);
   assert.equal(again.body.id, first.body.id);
+
+  // Someone else's registration (or one that does not exist) is a 404, as on
+  // the real server, and stays in place.
+  const stranger = (await call('POST', '/auth/sessions', null, { email: 'onboarding@preview.test', password: 'finland-preview' }))
+    .body.access_token;
+  const foreign = await call('DELETE', `/notifications/registrations/${encodeURIComponent(first.body.id)}`, stranger);
+  assert.equal(foreign.status, 404);
+  assert.equal(foreign.body.code, 'REGISTRATION_NOT_FOUND');
+  assert.equal((await call('DELETE', '/notifications/registrations/reg-missing', stranger)).status, 404);
+  assert.equal((await call('POST', '/notifications/registrations', await signIn(), reg)).body.id, first.body.id);
 
   const token = await signIn();
   assert.equal(

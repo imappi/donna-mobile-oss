@@ -50,13 +50,18 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Builds a URL path from a template, encoding EVERY interpolated value as
+ * exactly one path segment. Ids are opaque backend values (`outbound_action:x`,
+ * anything the server mints), so none of them may be able to add a segment,
+ * a query or a fragment. Query strings are appended outside this helper.
+ * Every JSON API method builds its path through here.
+ */
+export const path = (strings: TemplateStringsArray, ...segments: string[]): string =>
+  strings.reduce((out, literal, index) =>
+    out + literal + (index < segments.length ? encodeURIComponent(segments[index]) : ''), '');
+
 export class ApiClient {
-  getSettings(entityId: string): Promise<MobileSettings> {
-    return this.request('GET', `/entities/${entityId}/settings`);
-  }
-  updateSettings(entityId: string, action: MobileSettingsAction): Promise<MobileSettingsResult> {
-    return this.request('POST', `/entities/${entityId}/settings`, action);
-  }
   private baseUrl: string;
   private store: TokenStore;
   private refreshing: Promise<boolean> | null = null;
@@ -162,6 +167,15 @@ export class ApiClient {
     return json as T;
   }
 
+  // ── settings ──────────────────────────────────────────────────────────
+  getSettings(entityId: string): Promise<MobileSettings> {
+    return this.request('GET', path`/entities/${entityId}/settings`);
+  }
+
+  updateSettings(entityId: string, action: MobileSettingsAction): Promise<MobileSettingsResult> {
+    return this.request('POST', path`/entities/${entityId}/settings`, action);
+  }
+
   // ── auth ──────────────────────────────────────────────────────────────
   async signIn(email: string, password: string): Promise<Session> {
     const session = await this.request<Session>('POST', '/auth/sessions', { email, password }, { retry: false });
@@ -179,7 +193,7 @@ export class ApiClient {
 
   getFinancialReview(entityId: string, kind: 'taxes' | 'month', period?: string) {
     return this.request<FinancialReview>('GET',
-      `/entities/${encodeURIComponent(entityId)}/reviews/${kind}${period ? '?period=' + encodeURIComponent(period) : ''}`);
+      path`/entities/${entityId}/reviews/${kind}` + (period ? `?period=${encodeURIComponent(period)}` : ''));
   }
 
   getMe() {
@@ -195,7 +209,7 @@ export class ApiClient {
 
   // ── onboarding profile ────────────────────────────────────────────────
   createTextOnboardingDraft(entityId: string, text: string) {
-    return this.request<VoiceOnboardingDraft>('POST', `/entities/${entityId}/onboarding/text-draft`, { text });
+    return this.request<VoiceOnboardingDraft>('POST', path`/entities/${entityId}/onboarding/text-draft`, { text });
   }
 
   createVoiceOnboardingDraft(
@@ -207,7 +221,7 @@ export class ApiClient {
     signal?: AbortSignal
   ) {
     return this.requestAudio<VoiceOnboardingDraft>(
-      `/entities/${entityId}/onboarding/voice-draft`,
+      path`/entities/${entityId}/onboarding/voice-draft`,
       audio,
       filename,
       mimeType,
@@ -219,62 +233,62 @@ export class ApiClient {
   confirmOnboardingProfile(entityId: string, input: OnboardingProfileConfirmation) {
     return this.request<OnboardingProfileConfirmationResult>(
       'PUT',
-      `/entities/${entityId}/onboarding/profile`,
+      path`/entities/${entityId}/onboarding/profile`,
       input
     );
   }
 
   // ── queue ─────────────────────────────────────────────────────────────
   getBusinessSetup(entityId: string) {
-    return this.request<BusinessSetup>('GET', `/entities/${entityId}/business-setup`);
+    return this.request<BusinessSetup>('GET', path`/entities/${entityId}/business-setup`);
   }
 
   lookupBusiness(entityId: string, businessId: string) {
-    return this.request<{ candidate: RegistryCandidate | null }>('POST', `/entities/${entityId}/business-setup/lookup`, { business_id: businessId });
+    return this.request<{ candidate: RegistryCandidate | null }>('POST', path`/entities/${entityId}/business-setup/lookup`, { business_id: businessId });
   }
 
   updateBusinessSetup(entityId: string, action: BusinessSetupAction) {
-    return this.request<BusinessSetupResult>('POST', `/entities/${entityId}/business-setup`, action);
+    return this.request<BusinessSetupResult>('POST', path`/entities/${entityId}/business-setup`, action);
   }
 
   getQueue(entityId: string) {
-    return this.request<QueueResponse>('GET', `/entities/${entityId}/queue`);
+    return this.request<QueueResponse>('GET', path`/entities/${entityId}/queue`);
   }
 
   getQueueCard(entityId: string, cardId: string) {
-    return this.request<QueueCard>('GET', `/entities/${entityId}/queue/cards/${encodeURIComponent(cardId)}`);
+    return this.request<QueueCard>('GET', path`/entities/${entityId}/queue/cards/${cardId}`);
   }
 
   decideQueueCard(entityId: string, cardId: string, decision: Decision) {
     return this.request<DecisionResult>(
       'POST',
-      `/entities/${entityId}/queue/cards/${encodeURIComponent(cardId)}/decision`,
+      path`/entities/${entityId}/queue/cards/${cardId}/decision`,
       decision
     );
   }
 
   // ── status ────────────────────────────────────────────────────────────
   getBooksStatus(entityId: string) {
-    return this.request<BooksStatus>('GET', `/entities/${entityId}/status`);
+    return this.request<BooksStatus>('GET', path`/entities/${entityId}/status`);
   }
 
   // ── documents ─────────────────────────────────────────────────────────
   listDocuments(entityId: string, limit = 30) {
     return this.request<{ documents: Doc[]; next_cursor?: string | null }>(
       'GET',
-      `/entities/${entityId}/documents?limit=${limit}`
+      path`/entities/${entityId}/documents` + `?limit=${limit}`
     );
   }
 
   getDocument(entityId: string, documentId: string) {
-    return this.request<Doc>('GET', `/entities/${entityId}/documents/${encodeURIComponent(documentId)}`);
+    return this.request<Doc>('GET', path`/entities/${entityId}/documents/${documentId}`);
   }
 
   createUploadIntent(
     entityId: string,
     input: { filename: string; mime_type: string; size: number; checksum_sha256: string }
   ) {
-    return this.request<UploadIntent>('POST', `/entities/${entityId}/documents/upload-intent`, input);
+    return this.request<UploadIntent>('POST', path`/entities/${entityId}/documents/upload-intent`, input);
   }
 
   /** Step 2 — raw bytes to the signed URL, outside the JSON API. */
@@ -301,33 +315,33 @@ export class ApiClient {
       purpose?: 'prior_records';
     }[]
   ) {
-    return this.request<{ documents: Doc[] }>('POST', `/entities/${entityId}/documents/register`, { documents });
+    return this.request<{ documents: Doc[] }>('POST', path`/entities/${entityId}/documents/register`, { documents });
   }
 
   getParseStatus(entityId: string, ids: string[]) {
     return this.request<{ documents: ParseStatus[] }>(
       'GET',
-      `/entities/${entityId}/documents/parse-status?ids=${encodeURIComponent(ids.join(','))}`
+      path`/entities/${entityId}/documents/parse-status` + `?ids=${encodeURIComponent(ids.join(','))}`
     );
   }
 
   retryDocument(entityId: string, documentId: string) {
-    return this.request<Doc>('POST', `/entities/${entityId}/documents/${documentId}/retry`);
+    return this.request<Doc>('POST', path`/entities/${entityId}/documents/${documentId}/retry`);
   }
 
   resolveDuplicate(entityId: string, documentId: string, action: 'create' | 'replace' | 'cancel') {
-    return this.request<Doc>('POST', `/entities/${entityId}/documents/${documentId}/resolve-duplicate`, { action });
+    return this.request<Doc>('POST', path`/entities/${entityId}/documents/${documentId}/resolve-duplicate`, { action });
   }
 
   // ── chat ──────────────────────────────────────────────────────────────
   listChatMessages(entityId: string, limit = 50) {
-    return this.request<{ messages: ChatMessage[] }>('GET', `/entities/${entityId}/chat?limit=${limit}`);
+    return this.request<{ messages: ChatMessage[] }>('GET', path`/entities/${entityId}/chat` + `?limit=${limit}`);
   }
 
   sendChatMessage(entityId: string, text: string) {
     return this.request<{ message: ChatMessage; reply?: ChatMessage | null }>(
       'POST',
-      `/entities/${entityId}/chat/messages`,
+      path`/entities/${entityId}/chat/messages`,
       { text }
     );
   }
@@ -339,21 +353,21 @@ export class ApiClient {
       action: AppliableChatAction;
       receipt?: Receipt | null;
       card?: QueueCard | null;
-    }>('POST', `/entities/${entityId}/chat/actions/${encodeURIComponent(actionId)}/apply`);
+    }>('POST', path`/entities/${entityId}/chat/actions/${actionId}/apply`);
   }
 
   // ── artifact conversation ─────────────────────────────────────────────
   listArtifactMessages(entityId: string, kind: ArtifactKind, artifactId: string, limit = 50) {
     return this.request<ArtifactConversation>(
       'GET',
-      `/entities/${entityId}/artifacts/${kind}/${encodeURIComponent(artifactId)}/messages?limit=${limit}`
+      path`/entities/${entityId}/artifacts/${kind}/${artifactId}/messages` + `?limit=${limit}`
     );
   }
 
   sendArtifactMessage(entityId: string, kind: ArtifactKind, artifactId: string, text: string) {
     return this.request<{ message: ChatMessage; reply?: ChatMessage | null }>(
       'POST',
-      `/entities/${entityId}/artifacts/${kind}/${encodeURIComponent(artifactId)}/messages`,
+      path`/entities/${entityId}/artifacts/${kind}/${artifactId}/messages`,
       { text }
     );
   }
@@ -365,7 +379,7 @@ export class ApiClient {
   ) {
     return this.request<{ receipt: Receipt; card?: QueueCard | null }>(
       'POST',
-      `/entities/${entityId}/mileage`,
+      path`/entities/${entityId}/mileage`,
       input
     );
   }
@@ -374,7 +388,7 @@ export class ApiClient {
   listActivity(entityId: string, limit = 50) {
     return this.request<{ events: ActivityEvent[]; next_cursor?: string | null }>(
       'GET',
-      `/entities/${entityId}/activity?limit=${limit}`
+      path`/entities/${entityId}/activity` + `?limit=${limit}`
     );
   }
 
@@ -384,6 +398,6 @@ export class ApiClient {
   }
 
   unregisterFromPush(registrationId: string) {
-    return this.request<void>('DELETE', `/notifications/registrations/${encodeURIComponent(registrationId)}`);
+    return this.request<void>('DELETE', path`/notifications/registrations/${registrationId}`);
   }
 }
