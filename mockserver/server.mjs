@@ -10,6 +10,7 @@ import { buildFinancialReview, enrichRefinementBook, refinementStatus } from './
 import crypto from 'node:crypto';
 import { demoCopy, localizeSeedCards, localizeSeedDocuments } from './finnishFixtures.mjs';
 import { lookupBusiness, SetupError, setupSnapshot, stageRegistryCandidate, updateBusinessSetup } from './businessSetup.mjs';
+import { createPushRegistrations } from './pushRegistrations.mjs';
 import {
   DEMO_LOGIN,
   ENTITY,
@@ -121,7 +122,7 @@ const state = {
     }
   },
   sessions: new Map(), // access_token -> { refresh_token, accountKey }
-  pushRegistrations: new Map(),
+  pushRegistrations: createPushRegistrations(() => uid('reg')),
   storage: new Map() // object key -> byte length
 };
 if (process.env.DEMO_REFINEMENT === 'true') enrichRefinementBook(state.books[ENTITY.id]);
@@ -1090,13 +1091,12 @@ const server = http.createServer(async (req, res) => {
     if (!body?.platform || !body?.expo_push_token) {
       return json(res, 400, { error: 'platform and expo_push_token required.', code: 'REGISTRATION_INVALID' });
     }
-    const id = uid('reg');
-    state.pushRegistrations.set(id, body);
+    const id = state.pushRegistrations.upsert(activeAccount.principal.id, body);
     return json(res, 201, { id });
   }
   const regMatch = path.match(/^\/notifications\/registrations\/([^/]+)$/);
   if (method === 'DELETE' && regMatch) {
-    state.pushRegistrations.delete(regMatch[1]);
+    state.pushRegistrations.remove(activeAccount.principal.id, decodeURIComponent(regMatch[1]));
     return json(res, 204, {});
   }
 

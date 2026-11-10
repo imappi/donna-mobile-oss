@@ -235,3 +235,18 @@ test('voice onboarding uploads completed audio and profile confirmation is a sep
   assert.equal(calls[1].method, 'PUT');
   assert.match(String(calls[1].body), /"confirmed_exact_fields":\["owner_name","business_name"\]/);
 });
+
+test('unregisterFromPush URL-encodes the registration id into one path segment', async (t) => {
+  const originalFetch = globalThis.fetch;
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  const urls: string[] = [];
+  globalThis.fetch = async (input, init) => {
+    urls.push(`${init?.method} ${String(input)}`);
+    return new Response(null, { status: 204 });
+  };
+  const api = new ApiClient('https://api.example.test', memoryTokens({ access_token: 'a', refresh_token: 'r' }).store);
+  await api.unregisterFromPush('reg/1 ?x#y');
+  assert.deepEqual(urls, ['DELETE https://api.example.test/notifications/registrations/reg%2F1%20%3Fx%23y']);
+});
