@@ -250,3 +250,49 @@ test('unregisterFromPush URL-encodes the registration id into one path segment',
   await api.unregisterFromPush('reg/1 ?x#y');
   assert.deepEqual(urls, ['DELETE https://api.example.test/notifications/registrations/reg%2F1%20%3Fx%23y']);
 });
+
+test('every method puts caller-supplied ids into the path as single encoded segments', async (t) => {
+  const originalFetch = globalThis.fetch;
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  // A slash, a dot-dot, a space and a percent: each one changes the route
+  // (or fails to parse) if it reaches the path unencoded.
+  const HOSTILE = 'id/../sub %x';
+  const ENCODED = encodeURIComponent(HOSTILE);
+  const urls: string[] = [];
+  globalThis.fetch = async (input) => {
+    urls.push(String(input));
+    return json({ access_token: 'a', refresh_token: 'r', documents: [] });
+  };
+  const api = new ApiClient('https://api.example.test', memoryTokens({ access_token: 'a', refresh_token: 'r' }).store);
+  // Methods whose arguments are not ids get typed arguments of their own.
+  const argsFor: Record<string, unknown[]> = {
+    getParseStatus: [HOSTILE, [HOSTILE]],
+    listDocuments: [HOSTILE, 30],
+    listChatMessages: [HOSTILE, 50],
+    listActivity: [HOSTILE, 50],
+    listArtifactMessages: [HOSTILE, HOSTILE, HOSTILE, 50],
+    getFinancialReview: [HOSTILE, 'month']
+  };
+  // Not part of the JSON API: internals, and the signed upload URL the backend hands out whole.
+  const skip = new Set(['constructor', 'request', 'requestAudio', 'refreshOnce', 'putUpload']);
+  const methods = Object.getOwnPropertyNames(ApiClient.prototype).filter((name) => !skip.has(name));
+  assert.ok(methods.length > 25, 'the client surface was enumerated');
+  const callable = api as unknown as Record<string, (...args: unknown[]) => Promise<unknown>>;
+  const problems: string[] = [];
+  for (const name of methods) {
+    urls.length = 0;
+    await callable[name](...(argsFor[name] ?? [HOSTILE, HOSTILE, HOSTILE, HOSTILE, HOSTILE, HOSTILE]));
+    for (const url of urls) {
+      const path = url.slice('https://api.example.test'.length).split('?')[0];
+      if (path.includes(HOSTILE) || path.includes('id/') || path.includes(' ')) {
+        problems.push(`${name}: ${path}`);
+      }
+      if (/\/entities\//.test(path) && !path.startsWith(`/entities/${ENCODED}/`)) {
+        problems.push(`${name}: entity id not encoded in ${path}`);
+      }
+    }
+  }
+  assert.deepEqual(problems, []);
+});

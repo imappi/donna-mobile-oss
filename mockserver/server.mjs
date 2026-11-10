@@ -639,7 +639,13 @@ const server = http.createServer(async (req, res) => {
 
   const entityMatch = path.match(/^\/entities\/([^/]+)(\/.*)?$/);
   if (entityMatch) {
-    const [, entityId, restRaw] = entityMatch;
+    const [, entityRaw, restRaw] = entityMatch;
+    let entityId;
+    try {
+      entityId = decodeURIComponent(entityRaw);
+    } catch {
+      return json(res, 404, { error: 'No such entity.', code: 'ENTITY_NOT_FOUND' });
+    }
     const rest = restRaw || '';
     if (!activeAccount.entities.some((entity) => entity.id === entityId)) {
       return json(res, 404, { error: 'No such entity.', code: 'ENTITY_NOT_FOUND' });
@@ -967,7 +973,7 @@ const server = http.createServer(async (req, res) => {
 
     const docAction = rest.match(/^\/documents\/([^/]+)\/(retry|resolve-duplicate)$/);
     if (method === 'POST' && docAction) {
-      const doc = findDoc(book, docAction[1]);
+      const doc = findDoc(book, decodeURIComponent(docAction[1]));
       if (!doc) return json(res, 404, { error: 'No such document.', code: 'DOCUMENT_NOT_FOUND' });
       if (docAction[2] === 'retry') {
         if (!['failed', 'duplicate'].includes(doc.capture_state)) {
