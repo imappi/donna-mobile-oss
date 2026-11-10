@@ -1109,7 +1109,11 @@ const server = http.createServer(async (req, res) => {
   }
   const regMatch = path.match(/^\/notifications\/registrations\/([^/]+)$/);
   if (method === 'DELETE' && regMatch) {
-    state.pushRegistrations.remove(activeAccount.principal.id, decodeURIComponent(regMatch[1]));
+    // As on the real server: a registration this principal does not own is
+    // indistinguishable from one that does not exist.
+    if (!state.pushRegistrations.remove(activeAccount.principal.id, decodeURIComponent(regMatch[1]))) {
+      return json(res, 404, { error: 'No such registration.', code: 'REGISTRATION_NOT_FOUND' });
+    }
     return json(res, 204, {});
   }
 
