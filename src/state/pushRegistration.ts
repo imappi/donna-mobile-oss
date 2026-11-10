@@ -6,6 +6,8 @@ import { getLocale } from '@core/i18n';
 import { notificationPermissionGranted } from './notificationPermission';
 import { readDevicePreferences } from './devicePreferences';
 import { pushProjectId } from './pushProjectId';
+import { androidChannelName, submitRegistration, type StoredRegistration } from './pushRegistrationFlow';
+import { shell } from '@/shell';
 
 /**
  * Device push registration against the contract's
@@ -13,14 +15,13 @@ import { pushProjectId } from './pushProjectId';
  * push is a convenience channel, so no failure in it may ever block
  * sign-in, sign-out, or the session — errors log and yield.
  *
- * The stored pair {id, token} makes re-registration idempotent
- * app-side (same token → skip). The matching server-side expectation —
- * the backend upserts on (principal, token) rather than growing a
- * registration per app start — is recorded in contract/DESIGN-NOTES.md.
+ * The app registers on every sign-in, even with an unchanged token, so the
+ * backend always knows every business the owner can see. Idempotency lives
+ * server-side: the backend upserts on (principal, token), answers the same
+ * id and writes nothing when nothing changed (contract/DESIGN-NOTES.md).
+ * The stored pair {id, token} only lets sign-out DELETE the registration.
  */
 const REG_KEY = 'donna.push.registration';
-
-type StoredRegistration = { id: string; token: string };
 
 const readStored = async (): Promise<StoredRegistration | null> => {
   try {
@@ -53,19 +54,18 @@ export const registerPush = async (api: ApiClient, requestPermission = false): P
     if (!(await notificationPermissionGranted(Notifications, requestPermission))) return;
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {
-        name: 'Donna',
+        name: androidChannelName(shell),
         importance: Notifications.AndroidImportance.DEFAULT
       });
     }
     const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
-    const stored = await readStored();
-    if (stored?.token === token) return;
-    const { id } = await api.registerForPush({
-      platform: Platform.OS,
-      expo_push_token: token,
-      locale: getLocale()
-    });
-    await SecureStore.setItemAsync(REG_KEY, JSON.stringify({ id, token } satisfies StoredRegistration));
+    await submitRegistration(
+      {
+        api,
+        writeStored: (registration) => SecureStore.setItemAsync(REG_KEY, JSON.stringify(registration))
+      },
+      { platform: Platform.OS, expo_push_token: token, locale: getLocale() }
+    );
   } catch (e) {
     console.warn('[push] registration skipped', e);
   }
