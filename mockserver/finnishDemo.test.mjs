@@ -163,3 +163,25 @@ test('every error message the mock writes has its own Finnish line', async () =>
   assert.equal(localizeError("Unknown decision type 'shrug'.", 'fi'), 'Tuntematon päätös: shrug.');
   assert.equal(localizeError('No such card.', 'en'), 'No such card.');
 });
+
+test('chat replies name only what the app shell has: Books and the launcher', async (t) => {
+  const { en: enWords } = await import('../core/i18n/en.ts');
+  const { fi: fiWords } = await import('../core/i18n/fi.ts');
+  const servers = { en: [await start(t, 'en'), enWords], fi: [await start(t, 'fi'), fiWords] };
+  const GONE = /\+ ?-?(button|painik)|\bActions\b|\bMaterials\b|Tehtäv|Aineisto/;
+  for (const [locale, [server, words]] of Object.entries(servers)) {
+    const chat = `/entities/${server.entities[0]}/chat/messages`;
+    const replies = {};
+    for (const [kind, text] of [['tax', 'Do I owe VAT?'], ['receipt', 'I have a receipt photo'], ['other', 'Thanks!']]) {
+      replies[kind] = (await server.request(chat, server.token, { text })).reply.text;
+      assert.doesNotMatch(replies[kind], GONE, `${locale} ${kind}: ${replies[kind]}`);
+    }
+    // The words the owner is told to look for are the shell's own labels.
+    assert.ok(replies.receipt.includes(words.plus.snap), `${locale}: ${replies.receipt}`);
+    // Finnish inflects the name (Kirjanpito → Kirjanpidossa), so match its unchanging stem.
+    const books = words.home.title.slice(0, 8);
+    for (const kind of ['tax', 'receipt', 'other']) {
+      assert.ok(replies[kind].includes(books), `${locale} ${kind}: ${replies[kind]}`);
+    }
+  }
+});

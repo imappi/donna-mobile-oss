@@ -1011,13 +1011,14 @@ const server = http.createServer(async (req, res) => {
             : demoCopy('That sounds like it settles an open question — want me to file it?',
               'Tämä näyttää ratkaisevan avoimen kysymyksen – kirjaanko sen?')
           : /vat|tax|alv|vero/i.test(text)
-            ? demoCopy('Good question. For your kind of purchases the standard rate applies unless the receipt says otherwise — I check each one against the source rules and flag anything unusual in Actions.',
-              'Hyvä kysymys. Tällaisiin ostoksiin pätee yleinen verokanta, ellei kuitissa lue muuta. Tarkistan jokaisen säännöistä ja nostan poikkeukset Tehtäviin.')
+            ? demoCopy('Good question. For your kind of purchases the standard rate applies unless the receipt says otherwise — I check each one against the source rules and flag anything unusual in Books.',
+              'Hyvä kysymys. Tällaisiin ostoksiin pätee yleinen verokanta, ellei kuitissa lue muuta. Tarkistan jokaisen säännöistä ja nostan poikkeukset esiin Kirjanpidossa.')
             : /receipt|photo|kuitti|kuva/i.test(text)
-              ? demoCopy('Snap it with the + button whenever — I match it to the right bank line and you’ll see it settle in Materials.',
-                'Kuvaa se + -painikkeella milloin vain. Yhdistän sen oikeaan tilitapahtumaan, ja näet sen Aineistossa.')
-              : demoCopy(`Noted — I’ve got it. ${n === 0 ? 'Nothing is waiting on you right now.' : `${n} thing${n === 1 ? ' is' : 's are'} waiting on you in Actions; the rest is handled.`}`,
-                `Selvä, hoidan sen. ${n === 0 ? 'Mikään ei odota sinua juuri nyt.' : `${n === 1 ? '1 asia odottaa' : `${n} asiaa odottaa`} sinua Tehtävissä, loput on hoidettu.`}`),
+              // The shell: one Books stream, and Donna's launcher (Chat, Snap a receipt, Add a file, Log mileage) over it.
+              ? demoCopy('Back in Books, tap me and choose Snap a receipt whenever you like. I match it to the right bank line, and you’ll see it settle there.',
+                'Palaa Kirjanpitoon, napauta minua ja valitse Kuvaa kuitti milloin vain. Yhdistän kuitin oikeaan tilitapahtumaan, ja näet sen siellä, kun se on valmis.')
+              : demoCopy(`Noted — I’ve got it. ${n === 0 ? 'Nothing in Books is waiting on you right now.' : `${n} thing${n === 1 ? ' is' : 's are'} waiting on you in Books; the rest is handled.`}`,
+                `Selvä, hoidan sen. ${n === 0 ? 'Kirjanpidossa mikään ei odota sinua juuri nyt.' : `${n === 1 ? '1 asia odottaa' : `${n} asiaa odottaa`} sinua Kirjanpidossa, loput on hoidettu.`}`),
         at: new Date(Date.now() + 800).toISOString()
       };
       if (book.refinementSample) reply.text = demoCopy(
