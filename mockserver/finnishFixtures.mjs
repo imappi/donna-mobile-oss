@@ -101,12 +101,20 @@ export const localizeSeedDocuments = (documents, locale = process.env.DEMO_LOCAL
 // ── Activity, close status and chat (the same invented records) ───────────
 const fiMonth = (date) => date.toLocaleDateString('fi-FI', { month: 'long' });
 const capital = (text) => text.charAt(0).toLocaleUpperCase('fi') + text.slice(1);
+const monthBefore = (at) => {
+  const date = new Date(at);
+  return new Date(date.getFullYear(), date.getMonth() - 1, 1);
+};
 const activityCopy = {
   'ev-001': { title: '2 maksumuistutusta odottaa hyväksyntääsi', body: 'Harbour Joineryn ja Rowan & Chasen laskut ovat erääntyneet.' },
   'ev-002': { title: '14 tilitapahtumaa täsmäytetty' },
-  'ev-003': { title: 'receipt-quayside-22aug.jpg on nyt kirjanpidossasi' },
-  'ev-004': { title: 'Heinäkuu on valmis suljettavaksi', body: 'Kaikki on täsmäytetty. Donna sulkee kuukauden 5. päivänä, ellet sano muuta.' },
-  'ev-005': { title: 'Heinäkuun yhteenvetosi', body: 'Tulot 4 980 € · Kulut 2 210 € · 3 kysymykseen vastattu.' },
+  // The filename is the persisted one; only the sentence around it is Finnish.
+  'ev-003': { title: (event) => event.title.replace(/ is in your books$/, ' on nyt kirjanpidossasi') },
+  // Month-end events speak about the month before the one they happened in.
+  'ev-004': { title: (event) => `${capital(fiMonth(monthBefore(event.at)))} on valmis suljettavaksi`,
+    body: 'Kaikki on täsmäytetty. Donna sulkee kuukauden 5. päivänä, ellet sano muuta.' },
+  'ev-005': { title: (event) => `${capital(fiMonth(monthBefore(event.at)))}n yhteenvetosi`,
+    body: 'Tulot 4 980 € · Kulut 2 210 € · 3 kysymykseen vastattu.' },
   'ev-h01': { title: (event) => `${capital(fiMonth(new Date(event.at)))}n vuokra laskutettu`,
     body: 'Rowanberry Cottage · 1 150,00 €, jatkuvan valtuutuksesi mukaisesti.' },
   'ev-h02': { title: '1 kysymys Glenview Hardwaren ostoksesta' }
@@ -139,13 +147,17 @@ export const localizeStatus = (status, locale = process.env.DEMO_LOCALE) => loca
 };
 
 const chatCopy = {
-  'msg-welcome': 'Huomenta, Sam. Elokuu etenee hyvin – kolmeen ostokseen tarvitaan sinulta kuitti tai lyhyt tieto. Kaikki muu on minun hoidossani.',
+  'msg-welcome': (message) => `Huomenta, Sam. ${capital(fiMonth(new Date(message.at)))} etenee hyvin – kolmeen ostokseen tarvitaan sinulta kuitti tai lyhyt tieto. Kaikki muu on minun hoidossani.`,
   'msg-owner-vat': 'Pitääkö kangastilauksesta maksaa ALV?',
   'msg-donna-vat': 'Yleinen verokanta pätee, ellei kuitissa lue muuta. Lähetä kuitti tänne, niin tarkistan lähteen ennen kuin kirjaan mitään.',
   'msg-welcome-hazelmoor': 'Hei Sam. Hazelmoorissa on rauhallista – vuokralasku lähti jatkuvan valtuutuksesi mukaisesti, ja yhteen Glenview Hardwaren ostokseen tarvitaan lyhyt vastaus, kun ehdit.'
 };
 export const localizeSeedChat = (messages, locale = process.env.DEMO_LOCALE) => locale !== 'fi' ? messages :
-  messages.map(message => chatCopy[message.id] ? { ...message, text: chatCopy[message.id] } : message);
+  messages.map(message => {
+    const text = chatCopy[message.id];
+    if (!text) return message;
+    return { ...message, text: typeof text === 'function' ? text(message) : text };
+  });
 
 // ── Live copy: numbers and dates the server writes into Finnish sentences ──
 /** 12.5 → "12,5" (Finnish decimal comma). */

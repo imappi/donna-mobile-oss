@@ -21,6 +21,7 @@ import {
   PRINCIPAL,
   buildActivity,
   buildCards,
+  buildChat,
   buildDocuments,
   buildOnboardingBook,
   buildSecondBook,
@@ -56,34 +57,16 @@ const accounts = {
     defaultEntityId: ONBOARDING_ENTITY.id
   }
 };
+const seedDocuments = buildDocuments();
 const state = {
   books: {
     [ENTITY.id]: {
       entity: ENTITY,
       cards: localizeSeedCards(buildCards()),
-      documents: localizeSeedDocuments(buildDocuments()),
-      activity: localizeSeedActivity(buildActivity()),
+      documents: localizeSeedDocuments(seedDocuments),
+      activity: localizeSeedActivity(buildActivity(seedDocuments)),
       status: buildStatus,
-      chat: localizeSeedChat([
-        {
-          id: 'msg-welcome',
-          author: 'donna',
-          text: 'Morning Sam. August is moving along — three purchases need a receipt or a quick fact from you. Everything else is in my hands.',
-          at: new Date(Date.now() - 3600e3).toISOString()
-        },
-        {
-          id: 'msg-owner-vat',
-          author: 'owner',
-          text: 'Do I owe VAT on the fabric order?',
-          at: new Date(Date.now() - 1800e3).toISOString()
-        },
-        {
-          id: 'msg-donna-vat',
-          author: 'donna',
-          text: 'The standard rate applies unless the receipt says otherwise. Send it here and I’ll check the source before I post anything.',
-          at: new Date(Date.now() - 1200e3).toISOString()
-        }
-      ]),
+      chat: localizeSeedChat(buildChat()),
       artifactThreads: new Map(),
       artifactReceipts: new Map(),
       parse: new Map(), // documentId -> { parse_status, parse_stage, ... }
