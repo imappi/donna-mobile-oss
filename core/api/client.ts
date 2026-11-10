@@ -384,6 +384,6 @@ export class ApiClient {
   }
 
   unregisterFromPush(registrationId: string) {
-    return this.request<void>('DELETE', `/notifications/registrations/${registrationId}`);
+    return this.request<void>('DELETE', `/notifications/registrations/${encodeURIComponent(registrationId)}`);
   }
 }

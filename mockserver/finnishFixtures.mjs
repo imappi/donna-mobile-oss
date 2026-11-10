@@ -97,3 +97,52 @@ export const localizeSeedDocuments = (documents, locale = process.env.DEMO_LOCAL
     ...(document.id === 'doc-f01' ? { failure_message: 'Kuva oli liian epäselvä. Kokeile kuvata kuitti suorana ja lähempää.' } : {}),
     ...(document.id === 'doc-f02' ? { failure_message: 'PDF on suojattu salasanalla, eikä sitä voida avata.' } : {})
   }));
+
+// ── Activity, close status and chat (the same invented records) ───────────
+const fiMonth = (date) => date.toLocaleDateString('fi-FI', { month: 'long' });
+const capital = (text) => text.charAt(0).toLocaleUpperCase('fi') + text.slice(1);
+const activityCopy = {
+  'ev-001': { title: '2 maksumuistutusta odottaa hyväksyntääsi', body: 'Harbour Joineryn ja Rowan & Chasen laskut ovat erääntyneet.' },
+  'ev-002': { title: '14 tilitapahtumaa täsmäytetty' },
+  'ev-003': { title: 'receipt-quayside-22aug.jpg on nyt kirjanpidossasi' },
+  'ev-004': { title: 'Heinäkuu on valmis suljettavaksi', body: 'Kaikki on täsmäytetty. Donna sulkee kuukauden 5. päivänä, ellet sano muuta.' },
+  'ev-005': { title: 'Heinäkuun yhteenvetosi', body: 'Tulot 4 980 € · Kulut 2 210 € · 3 kysymykseen vastattu.' },
+  'ev-h01': { title: (event) => `${capital(fiMonth(new Date(event.at)))}n vuokra laskutettu`,
+    body: 'Rowanberry Cottage · 1 150,00 €, jatkuvan valtuutuksesi mukaisesti.' },
+  'ev-h02': { title: '1 kysymys Glenview Hardwaren ostoksesta' }
+};
+export const localizeSeedActivity = (events, locale = process.env.DEMO_LOCALE) => locale !== 'fi' ? events :
+  events.map(event => {
+    const text = activityCopy[event.id];
+    if (!text) return event;
+    const title = typeof text.title === 'function' ? text.title(event) : text.title;
+    return { ...event, title: title ?? event.title, body: event.body == null ? null : text.body ?? event.body };
+  });
+
+const blockerCopy = {
+  'A receipt or quick answer is still needed from you': 'Sinulta tarvitaan vielä kuitti tai lyhyt vastaus',
+  'Donna is matching the latest bank lines': 'Donna täsmäyttää uusimpia tilitapahtumia',
+  'One purchase needs a quick answer from you': 'Yhteen ostokseen tarvitaan sinulta lyhyt vastaus'
+};
+/** Period labels follow the persisted period start; a year stays when the English label has one. */
+export const localizeStatus = (status, locale = process.env.DEMO_LOCALE) => locale !== 'fi' ? status : {
+  ...status,
+  periods: status.periods.map(period => {
+    const [year, month] = period.period_start.split('-').map(Number);
+    const name = capital(fiMonth(new Date(year, month - 1, 1)));
+    return {
+      ...period,
+      label: /\d{4}/.test(period.label) ? `${name} ${year}` : name,
+      blockers: period.blockers.map(blocker => ({ ...blocker, label: blockerCopy[blocker.label] ?? blocker.label }))
+    };
+  })
+};
+
+const chatCopy = {
+  'msg-welcome': 'Huomenta, Sam. Elokuu etenee hyvin – kolmeen ostokseen tarvitaan sinulta kuitti tai lyhyt tieto. Kaikki muu on minun hoidossani.',
+  'msg-owner-vat': 'Pitääkö kangastilauksesta maksaa ALV?',
+  'msg-donna-vat': 'Yleinen verokanta pätee, ellei kuitissa lue muuta. Lähetä kuitti tänne, niin tarkistan lähteen ennen kuin kirjaan mitään.',
+  'msg-welcome-hazelmoor': 'Hei Sam. Hazelmoorissa on rauhallista – vuokralasku lähti jatkuvan valtuutuksesi mukaisesti, ja yhteen Glenview Hardwaren ostokseen tarvitaan lyhyt vastaus, kun ehdit.'
+};
+export const localizeSeedChat = (messages, locale = process.env.DEMO_LOCALE) => locale !== 'fi' ? messages :
+  messages.map(message => chatCopy[message.id] ? { ...message, text: chatCopy[message.id] } : message);

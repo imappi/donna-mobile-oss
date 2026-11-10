@@ -911,7 +911,7 @@ export interface components {
             occurred_on?: string | null;
             /** Format: date-time */
             created_at: string;
-            /** @description Signed */
+            /** @description Signed, major units. */
             amount?: number | null;
             currency?: string | null;
             counterparty?: string | null;
@@ -1151,7 +1151,7 @@ export interface components {
             uploaded_at: string;
             /** Format: date-time */
             captured_at?: string | null;
-            /** @description Backend classification */
+            /** @description Backend classification, display only. */
             document_type?: string | null;
             /** Format: date */
             document_date?: string | null;

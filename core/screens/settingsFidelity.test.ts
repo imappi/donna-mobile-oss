@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { getLocale, setLocale } from "../i18n";
-import { settingsCopy, type SettingsPage } from "../i18n/settings";
+import { dictionaries, getLocale, setBrandName, setLocale } from "../i18n";
+import { settingsCopy, settingsText, type SettingsPage } from "../i18n/settings";
 import { settings } from "../design/tokens";
 const pages: SettingsPage[] = [
   "home",
@@ -81,4 +81,41 @@ test("handoff claims and static identities are not shipped as account facts", ()
   );
   assert.match(layout, /router.push\('\/settings'\)/);
   assert.doesNotMatch(layout, /<OwnerMenu/);
+});
+
+/** String values only: keys such as `chatWithDonna` are code, not copy. */
+const stringsWith = (node: unknown, needle: string): string[] =>
+  typeof node === "string"
+    ? node.includes(needle)
+      ? [node]
+      : []
+    : node && typeof node === "object"
+      ? Object.values(node).flatMap((value) => stringsWith(value, needle))
+      : [];
+test("core copy takes the product name from the shell, never a literal", () => {
+  const locale = getLocale();
+  setBrandName("Aurora");
+  try {
+    for (const language of ["fi", "en"] as const) {
+      setLocale(language);
+      for (const page of pages) {
+        assert.deepEqual(
+          stringsWith(settingsCopy(page), "Donna"),
+          [],
+          `${language} ${page}`,
+        );
+      }
+      assert.equal(settingsCopy("home").sections[2].title, "Aurora");
+      assert.equal(settingsCopy("language").eyebrow, "Aurora");
+      assert.equal(settingsText("settings").includes("Donna"), false);
+      assert.deepEqual(
+        stringsWith(dictionaries[language], "Donna"),
+        [],
+        `${language} dictionary`,
+      );
+    }
+  } finally {
+    setBrandName("Donna");
+    setLocale(locale);
+  }
 });

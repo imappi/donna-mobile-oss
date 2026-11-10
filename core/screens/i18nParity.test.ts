@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { dictionaries } from '../i18n';
 import { en } from '../i18n/en';
+import { settingsLocales, settingsPairs } from '../i18n/settings';
 
 /**
  * Every locale carries every English key, no extra keys, and the same
@@ -38,7 +39,8 @@ export const localeProblems = (reference: Tree, locale: Tree): string[] => {
   for (const [key, source] of want) {
     const text = have.get(key);
     if (text === undefined) problems.push(`missing ${key}`);
-    else if (text.trim() === '') problems.push(`empty ${key}`);
+    // A blank English source is a deliberate blank (the Settings home has no eyebrow).
+    else if (text.trim() === '' && source.trim() !== '') problems.push(`empty ${key}`);
     else if (!sameTokens(source, text))
       problems.push(`placeholders differ in ${key}: {${tokens(source).join('},{')}} vs {${tokens(text).join('},{')}}`);
   }
@@ -50,6 +52,80 @@ test('every locale has every English key with the same placeholders', () => {
   for (const [locale, dictionary] of Object.entries(dictionaries)) {
     assert.deepEqual(localeProblems(en as unknown as Tree, dictionary as unknown as Tree), [], locale);
   }
+});
+
+/**
+ * Settings copy lives in its own file (core/i18n/settings.ts) because its
+ * pages are row structures, not flat keys. Same guarantee: every English
+ * string has a Finnish one with the same placeholders, and the rows a
+ * translation renders keep the same icons, routes and flags.
+ */
+const STRUCTURE = /\.(icon|go|toggle|radio|option)$/;
+const structure = (node: unknown, prefix = ''): Map<string, unknown> => {
+  const out = new Map<string, unknown>();
+  if (node == null || typeof node !== 'object') return out;
+  for (const [key, value] of Object.entries(node)) {
+    const path = prefix + key;
+    if (value != null && typeof value === 'object') for (const [k, v] of structure(value, `${path}.`)) out.set(k, v);
+    else if (typeof value !== 'string' || STRUCTURE.test(`.${path}`)) out.set(path, value);
+  }
+  return out;
+};
+const copyOnly = (node: unknown): Tree => {
+  if (Array.isArray(node)) return Object.fromEntries(node.map((v, i) => [String(i), copyOnly(v)]));
+  const out: Tree = {};
+  for (const [key, value] of Object.entries(node as object)) {
+    if (typeof value === 'string' && !STRUCTURE.test(`.${key}`)) out[key] = value;
+    else if (value != null && typeof value === 'object') out[key] = copyOnly(value);
+  }
+  return out;
+};
+export const settingsProblems = (
+  locales: Record<string, unknown>,
+  pairs: Record<string, readonly string[]>
+): string[] => {
+  const reference = locales.en;
+  const problems: string[] = [];
+  for (const [locale, copy] of Object.entries(locales)) {
+    if (locale === 'en') continue;
+    problems.push(...localeProblems(copyOnly(reference), copyOnly(copy)).map(p => `${locale} ${p}`));
+    const want = structure(reference);
+    const have = structure(copy);
+    for (const [key, value] of want) if (have.get(key) !== value) problems.push(`${locale} structure differs at ${key}`);
+    for (const key of have.keys()) if (!want.has(key)) problems.push(`${locale} structure differs at ${key}`);
+  }
+  const pairTree = (index: number): Tree =>
+    Object.fromEntries(Object.entries(pairs).map(([key, pair]) => [key, pair[index] ?? '']));
+  problems.push(...localeProblems(pairTree(1), pairTree(0)).map(p => `fi text ${p}`));
+  for (const [key, pair] of Object.entries(pairs)) {
+    if (pair.length !== 2) problems.push(`text ${key} needs exactly [fi, en]`);
+    if (!pair[1]?.trim()) problems.push(`en text empty ${key}`);
+  }
+  return problems;
+};
+
+test('every Settings string has Finnish and English with the same placeholders and rows', () => {
+  assert.deepEqual(settingsProblems(settingsLocales, settingsPairs), []);
+});
+
+test('the Settings check reports a missing translation, a changed row and a half pair', () => {
+  const en = { page: { title: 'Bank', lead: 'Ask {brand}', sections: [{ rows: [{ label: 'OP', go: 'done' }] }] } };
+  assert.deepEqual(settingsProblems({ en, fi: { page: { title: 'Pankki', lead: 'Kysy', sections: [{ rows: [{ label: 'OP', go: 'done' }] }] } } }, { ok: ['Hei', 'Hi'] }), []);
+  assert.deepEqual(
+    settingsProblems(
+      { en, fi: { page: { title: 'Pankki', sections: [{ rows: [{ label: 'OP', go: 'elsewhere', noIcon: true }] }] } } },
+      { half: ['Hei'], blank: [' ', 'Hi'], drift: ['{pvm}', '{date}'] }
+    ),
+    [
+      'fi missing page.lead',
+      'fi structure differs at page.sections.0.rows.0.go',
+      'fi structure differs at page.sections.0.rows.0.noIcon',
+      'fi text empty blank',
+      'fi text placeholders differ in drift: {date} vs {pvm}',
+      'text half needs exactly [fi, en]',
+      'en text empty half'
+    ]
+  );
 });
 
 test('the parity check reports missing keys, extra keys and placeholder drift', () => {
