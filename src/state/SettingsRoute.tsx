@@ -28,6 +28,7 @@ import { useBooksStatus, useBusinessSetup } from "./hooks";
 import { useDeviceSettings } from "./deviceSettings";
 import { notificationPermissionGranted } from "./notificationPermission";
 import { registerPush, unregisterPush } from "./pushRegistration";
+import { backOrBooks } from "./backOrBooks";
 
 const pages: SettingsPage[] = [
   "home",
@@ -112,8 +113,7 @@ function Controller({ page, entity }: { page: SettingsPage; entity: Entity }) {
   const isFinland = entity.country === "FI";
   const go = (target: SettingsPage) =>
     router.push({ pathname: "/settings/[page]", params: { page: target } });
-  const back = () =>
-    router.canGoBack() ? router.back() : router.replace("/actions");
+  const back = () => backOrBooks(router);
   const perform = async (work: () => Promise<void>) => {
     if (busyRef.current) return;
     busyRef.current = true;

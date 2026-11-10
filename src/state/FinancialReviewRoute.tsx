@@ -5,6 +5,7 @@ import { FinancialReviewScreen } from '@core/screens/FinancialReviewScreen';
 import { EntityRoute } from './EntityRoute';
 import { useEntityId, useSession } from './session';
 import { shell } from '@/shell';
+import { backOrBooks } from './backOrBooks';
 
 const SignedInReview = ({ kind }: { kind: 'taxes' | 'month' }) => {
   const { api, state } = useSession();
@@ -16,7 +17,7 @@ const SignedInReview = ({ kind }: { kind: 'taxes' | 'month' }) => {
   const onChat = () => router.navigate('/chat');
   const onRow = (id: string) => router.push({ pathname: '/card/[id]', params: { id } });
   return <FinancialReviewScreen review={review.data} kind={kind} entityName={entityName} image={shell.mascot}
-    failed={review.isError} refreshing={review.isRefetching} onRefresh={() => review.refetch()} onBack={() => router.back()} onChat={onChat}
+    failed={review.isError} refreshing={review.isRefetching} onRefresh={() => review.refetch()} onBack={() => backOrBooks(router)} onChat={onChat}
     onRow={onRow} onAction={action => { if (action.kind === 'queue_card' && action.card_id) onRow(action.card_id); else onChat(); }} />;
 };
 export const FinancialReviewRoute = ({ kind }: { kind: 'taxes' | 'month' }) => {

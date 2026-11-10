@@ -4,6 +4,7 @@ import { ActivityScreen } from '@core/screens/ActivityScreen';
 import { hrefForDeepLink } from '@/state/deepLink';
 import { EntityRoute } from '@/state/EntityRoute';
 import { useActivity } from '@/state/hooks';
+import { backOrBooks } from '@/state/backOrBooks';
 
 const SignedInActivity = () => {
   const activity = useActivity();
@@ -11,7 +12,7 @@ const SignedInActivity = () => {
   return (
     <ActivityScreen
       events={activity.data?.events ?? []}
-      onBack={() => (router.canGoBack() ? router.back() : router.replace('/actions'))}
+      onBack={() => backOrBooks(router)}
       onOpen={(event) => {
         const href = hrefForDeepLink(event.deep_link);
         if (href) router.push(href);

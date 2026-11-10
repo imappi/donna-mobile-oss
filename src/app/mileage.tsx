@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@core/design';
-import { t } from '@core/i18n';
 import { MileageScreen } from '@core/screens/MileageScreen';
 import { EntityRoute } from '@/state/EntityRoute';
 import { useEntityId, useSession } from '@/state/session';
+import { backOrBooks } from '@/state/backOrBooks';
 
 const todayIso = () => {
   const d = new Date();
@@ -20,29 +20,29 @@ const SignedInMileage = () => {
   const router = useRouter();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
   const [unit, setUnit] = useState<'km' | 'mi'>('km');
-  // A cold deep link has no history to go back to: land on Books instead.
-  const leave = () => (router.canGoBack() ? router.back() : router.replace('/actions'));
+  const leave = () => backOrBooks(router);
 
   return (
     <MileageScreen
       busy={busy}
-      error={error}
+      failed={failed}
       defaultDate={todayIso()}
       unit={unit}
       onToggleUnit={setUnit}
       onBack={leave}
       onSave={async ({ date, distance, purpose }) => {
         setBusy(true);
-        setError(null);
+        setFailed(false);
         try {
           const result = await api.recordMileage(entityId, { date, distance, unit, purpose });
           queryClient.invalidateQueries({ queryKey: ['queue', entityId] });
           toast.show(result.receipt.summary);
           leave();
-        } catch (e) {
-          setError(e instanceof Error ? e.message : t('common.error_generic'));
+        } catch {
+          // The screen shows one plain sentence; the reason stays out of the interface.
+          setFailed(true);
         } finally {
           setBusy(false);
         }
